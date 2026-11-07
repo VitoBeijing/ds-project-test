@@ -14,7 +14,7 @@ describe("server config", () => {
     expect(readRefreshIntervalMinutes(undefined)).toBe(60);
   });
 
-  it.each(["0", "NaN", "35792"])("拒绝非法刷新间隔 %s", (value) => {
+  it.each(["0", "0.000001", "0.5", "NaN", "35792"])("拒绝非法刷新间隔 %s", (value) => {
     expect(() => readRefreshIntervalMinutes(value)).toThrow(/REFRESH_INTERVAL_MINUTES/);
   });
 });

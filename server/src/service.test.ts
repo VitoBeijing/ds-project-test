@@ -27,6 +27,29 @@ describe("hot topic service", () => {
     });
   });
 
+  it("并发刷新共用一次抓取，避免较旧结果覆盖新结果", async () => {
+    let finishFetch: ((topics: { title: string; rank: number }[]) => void) | undefined;
+    const provider = {
+      name: "test-source",
+      fetch: vi.fn(
+        () =>
+          new Promise<{ title: string; rank: number }[]>((resolve) => {
+            finishFetch = resolve;
+          }),
+      ),
+    };
+    const store = createStore(openDb());
+    const service = createHotTopicService(provider, store);
+    const firstRefresh = service.refresh();
+    const concurrentRefresh = service.refresh();
+
+    expect(provider.fetch).toHaveBeenCalledOnce();
+    finishFetch?.([{ title: "最新主题", rank: 1 }]);
+    const [firstResult, concurrentResult] = await Promise.all([firstRefresh, concurrentRefresh]);
+    expect(firstResult).toEqual(concurrentResult);
+    expect(store.listLatest().topics.map((topic) => topic.title)).toEqual(["最新主题"]);
+  });
+
   it("空抓取会清除旧列表并返回空态", async () => {
     const store = createStore(openDb());
     store.saveTopics("test-source", [{ title: "旧主题", rank: 1 }], "2026-11-07T09:00:00.000Z");

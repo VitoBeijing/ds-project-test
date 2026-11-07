@@ -37,6 +37,11 @@ describe("scheduler", () => {
     expect(isStopped).toBe(true);
   });
 
+  it("拒绝小于一分钟的间隔", () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    expect(() => startScheduler(refresh, 0.000001)).toThrow(/REFRESH_INTERVAL_MINUTES/);
+  });
+
   it("拒绝会溢出 Node 定时器上限的间隔", () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     expect(() => startScheduler(refresh, 35_792)).toThrow(/REFRESH_INTERVAL_MINUTES/);
