@@ -1,0 +1,17 @@
+{
+  "name": "ds-project-test",
+  "private": true,
+  "version": "0.0.0",
+  "description": "自媒体运营工作台（小红书 · 热点获取）",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

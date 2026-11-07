@@ -6,3 +6,10 @@ build/
 .env.*
 !.env.example
 *.log
+
+# 本地 SQLite 数据文件
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
