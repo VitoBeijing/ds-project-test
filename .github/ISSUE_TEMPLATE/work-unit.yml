@@ -1,0 +1,65 @@
+name: Work Unit
+description: 一个能由一个 PR 完成的工作单元（TechLead 创建，编程智能体执行）
+title: "[WU] "
+labels: ["agent:ready"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        此内容由团队 Bot 生成，不是人工撰写。
+        编程智能体：先读仓库根目录的 AGENTS.md。
+  - type: textarea
+    id: objective
+    attributes:
+      label: 目标
+      description: 做完后用户能看到或用到什么
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 来源
+      description: 对应的 PRD 章节或用户故事，例如 docs/PRD.md#用户故事-3
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: 约束
+      description: 不能动的地方、必须沿用的命名和规范、用户的明确限制
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 从 PRD 原样引用，每条都能被测试或观察到
+      placeholder: |
+        - [ ] 当……时，应该……
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: 涉及文件
+      description: 预计会改动的文件或模块（参考，不是限制）
+  - type: textarea
+    id: test-commands
+    attributes:
+      label: 测试命令
+      description: 完成前必须运行并通过的命令
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: 完成定义
+      description: 结束时应该存在什么 / 要检查什么 / 什么情况必须停下来问人 / 要交什么证据
+    validations:
+      required: true
+  - type: input
+    id: depends-on
+    attributes:
+      label: 依赖
+      description: 必须先完成的 Issue，例如 #12
