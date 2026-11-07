@@ -1,0 +1,36 @@
+package.json
+  s_a551a91a78986b::t_f74a8ee4b9bd3f 1-17
+.gitignore
+  s_a551a91a78986b::t_af542b2b8c0f7e 9-15
+tsconfig.json
+  s_a551a91a78986b::t_1651761db96126 1-14
+pnpm-workspace.yaml
+  s_a551a91a78986b::t_3f9711a4f2c959 1-7
+server/package.json
+  s_a551a91a78986b::t_f948acdf17bd38 1-18
+server/src/store.ts
+  s_a551a91a78986b::t_22e3381992b286 1-136
+server/tsconfig.json
+  s_a551a91a78986b::t_18fc5d00b61f2b 1-7
+server/src/store.test.ts
+  s_a551a91a78986b::t_576c464d6fc37e 23-36
+  s_a551a91a78986b::t_954f1a946979b9 1-3
+pnpm-lock.yaml
+  s_a551a91a78986b::t_1cf2bb006ee58c 1-1210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "6e2f6d9c3132b19baa107cbc2a2f7c0c88b1990f",
+  "prompts": {},
+  "sessions": {
+    "s_a551a91a78986b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "09254f25-d286-41fb-8533-ce354ab98451",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
