@@ -1,0 +1,23 @@
+server/src/service.test.ts
+  s_425d1decabe07d::t_bf0abfb16d5c4f 30-52
+server/src/config.test.ts
+  s_425d1decabe07d::t_06db97f30b6dc8 17
+server/src/scheduler.test.ts
+  s_425d1decabe07d::t_35af06a02d3b4e 40-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "2f7f467febeca10163af774dde407b737f10eb89",
+  "prompts": {},
+  "sessions": {
+    "s_425d1decabe07d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5737c779-a5d6-45ca-8754-3b59832136f7",
+        "model": "codex/gpt-6-luna"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
