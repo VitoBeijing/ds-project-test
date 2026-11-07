@@ -1,0 +1,19 @@
+server/src/config.test.ts
+  s_425d1decabe07d::t_40400963bdb828 17-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "832cce2495ff4a0b8a0a9573caf5255b32520e0e",
+  "prompts": {},
+  "sessions": {
+    "s_425d1decabe07d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5737c779-a5d6-45ca-8754-3b59832136f7",
+        "model": "codex/gpt-6-luna"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
