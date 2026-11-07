@@ -1,0 +1,54 @@
+server/package.json
+  s_425d1decabe07d::t_c128af9575e1ca 8
+  s_425d1decabe07d::t_5f366c92e2dc11 7
+  s_425d1decabe07d::t_711e41be21b354 14,18
+server/src/store.ts
+  s_425d1decabe07d::t_81fa329d04a560 38-39
+  s_425d1decabe07d::t_630b9247b31545 130-146,149
+server/src/service.ts
+  s_425d1decabe07d::t_0292a77df5dc59 21
+  s_425d1decabe07d::t_b9a13e56860ebc 1-13,19-20,22,34,37
+  s_425d1decabe07d::t_c580137bcfdca3 14-18,23-33,35-36
+server/src/api.ts
+  s_425d1decabe07d::t_c5fd434ef25318 1-15,18-23
+  s_425d1decabe07d::t_e84ad0bcd155fa 16-17
+server/src/config.ts
+  s_425d1decabe07d::t_9c5828803106e5 21
+  s_425d1decabe07d::t_99cedca19f7ea4 1-2,4,15-20,22-29
+  s_425d1decabe07d::t_a728c7adc2979a 3,5-14,30
+server/src/scheduler.ts
+  s_425d1decabe07d::t_43cd9c4a80fa9b 3-9,19-20,31-34,39
+  s_425d1decabe07d::t_e90f8faa729fe1 11,13,15-16,18,21-30,35-38
+  s_425d1decabe07d::t_bb7bcad56a224c 12
+  s_425d1decabe07d::t_020188b1c54bdc 1-2
+  s_425d1decabe07d::t_f99a75376173bb 14,17
+  s_425d1decabe07d::t_c115965658c0c0 10
+server/src/index.ts
+  s_425d1decabe07d::t_945cd8b6601c0a 35-40,42-44
+  s_425d1decabe07d::t_a7c182de1743b7 12
+  s_425d1decabe07d::t_36472e5e5dd652 2-3
+  s_425d1decabe07d::t_923909100810e0 4
+  s_425d1decabe07d::t_acbf7decffc2e2 11,13-17,23
+  s_425d1decabe07d::t_01c4c6bb866fed 27,29-33,41
+  s_425d1decabe07d::t_5583533e16d6fe 1,5-10,18-22,24-26,28,34,45-48
+server/tsconfig.build.json
+  s_425d1decabe07d::t_c43c5bc0cb3ab6 1-10
+pnpm-lock.yaml
+  s_425d1decabe07d::t_ff127d695c14a5 21-22,28-29,335-336,338-339,344-346,356-358,362-363,394-395,398-400,417-419,451-453,455-457,459-460,466-473,499-502,559-561,566-568,574-576,616-617,643-645,647-648,650-651,654-665,677-679,691-693,714-715,744-745,748-749,752-754,780-782,784-786,869-871,888-891,1131,1138,1141-1143,1147-1148,1157-1161,1166,1170,1212,1214-1217,1238,1241-1244,1246,1248-1251,1286-1288,1290,1292,1296-1299,1314-1315,1380,1382-1386,1388-1389,1394-1395,1397-1398,1401,1403-1408,1410-1411,1418,1420,1426,1432,1477,1497,1499,1501,1503-1505,1507-1509,1517-1518,1525,1543,1582,1587,1589,1593,1647,1649-1651,1655,1657,1660,1665,1670,1759,1761-1762,1772
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "04f0f68ec09757b1c2fb4e96951d697b64611ee1",
+  "prompts": {},
+  "sessions": {
+    "s_425d1decabe07d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5737c779-a5d6-45ca-8754-3b59832136f7",
+        "model": "codex/gpt-6-luna"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
