@@ -1,0 +1,21 @@
+server/src/provider.test.ts
+  s_6748bd7a5279f8::t_bd27ce79f22ea4 1-33
+server/src/provider.ts
+  s_6748bd7a5279f8::t_c810004e2a444e 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "31729f3795333c700e48eb650bff93053ada7eaf",
+  "prompts": {},
+  "sessions": {
+    "s_6748bd7a5279f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d3c0b0-b8b1-4a7a-b9e9-444f340ad1d3",
+        "model": "deepseek-v4-pro-ga-260813"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
