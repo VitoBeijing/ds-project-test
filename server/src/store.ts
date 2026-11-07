@@ -35,6 +35,8 @@ export interface TopicStore {
    * 每条热点的 rank 与 heat 至少其一非空，否则整批回滚并抛错。
    */
   saveTopics(source: string, topics: ProviderTopic[], fetchedAt: string): void;
+  /** 替换某来源的完整抓取快照，包括清空旧条目。 */
+  replaceTopics(source: string, topics: ProviderTopic[], fetchedAt: string): void;
   /** 返回最近一次抓取的热点列表（按排名升序、热度降序）；无数据返回 { topics: [], fetchedAt: null }。 */
   listLatest(): LatestTopics;
 }
@@ -125,8 +127,26 @@ export function createStore(db: Db): TopicStore {
     },
   );
 
+  const replaceAll = db.transaction(
+    (source: string, topics: ProviderTopic[], fetchedAt: string) => {
+      db.prepare("DELETE FROM topics WHERE source = ?").run(source);
+      for (const topic of topics) {
+        assertValid(topic);
+        upsert.run({
+          title: topic.title,
+          rank: topic.rank ?? null,
+          heat: topic.heat ?? null,
+          category: topic.category ?? null,
+          source,
+          fetchedAt,
+        });
+      }
+    },
+  );
+
   return {
     saveTopics: (source, topics, fetchedAt) => saveAll(source, topics, fetchedAt),
+    replaceTopics: (source, topics, fetchedAt) => replaceAll(source, topics, fetchedAt),
     listLatest() {
       const rows = latest.all();
       if (rows.length === 0) return { topics: [], fetchedAt: null };
