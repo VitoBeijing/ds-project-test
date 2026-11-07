@@ -27,6 +27,20 @@ describe("hot topic service", () => {
     });
   });
 
+  it("空抓取会清除旧列表并返回空态", async () => {
+    const store = createStore(openDb());
+    store.saveTopics("test-source", [{ title: "旧主题", rank: 1 }], "2026-11-07T09:00:00.000Z");
+    const service = createHotTopicService(
+      { name: "test-source", fetch: vi.fn().mockResolvedValue([]) },
+      store,
+    );
+
+    const result = await service.refresh();
+
+    expect(result).toEqual({ topics: [], fetchedAt: null });
+    expect(store.listLatest()).toEqual({ topics: [], fetchedAt: null });
+  });
+
   it("抓取失败时拒绝并保留已存列表", async () => {
     const store = createStore(openDb());
     store.saveTopics("test-source", [{ title: "旧主题", rank: 1 }], "2026-11-07T09:00:00.000Z");

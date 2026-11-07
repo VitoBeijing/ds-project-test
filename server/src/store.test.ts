@@ -150,6 +150,12 @@ describe("store", () => {
     expect(() => store.saveTopics("fixture", [{ title: "  ", rank: 1 }], T1)).toThrow(/title/);
   });
 
+  it("替换为空快照时清除同一来源的旧条目", () => {
+    store.saveTopics("fixture", [{ title: "旧主题", rank: 1 }], T1);
+    store.replaceTopics("fixture", [], T2);
+    expect(store.listLatest()).toEqual({ topics: [], fetchedAt: null });
+  });
+
   it("写入空数组是空操作", () => {
     store.saveTopics("fixture", [], T1);
     expect(store.listLatest()).toEqual({ topics: [], fetchedAt: null });

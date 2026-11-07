@@ -15,7 +15,31 @@ describe("scheduler", () => {
     expect(refresh).toHaveBeenCalledOnce();
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
     expect(refresh).toHaveBeenCalledTimes(2);
-    stop();
+    await stop();
+  });
+
+  it("停止时等待正在运行的刷新完成", async () => {
+    let finishRefresh: (() => void) | undefined;
+    const refresh = vi.fn(
+      () => new Promise<void>((resolve) => {
+        finishRefresh = resolve;
+      }),
+    );
+    const stop = startScheduler(refresh);
+    let isStopped = false;
+    const stopping = stop().then(() => {
+      isStopped = true;
+    });
+
+    expect(isStopped).toBe(false);
+    finishRefresh?.();
+    await stopping;
+    expect(isStopped).toBe(true);
+  });
+
+  it("拒绝会溢出 Node 定时器上限的间隔", () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    expect(() => startScheduler(refresh, 35_792)).toThrow(/REFRESH_INTERVAL_MINUTES/);
   });
 
   it("按配置的分钟间隔刷新并可停止", async () => {
@@ -25,7 +49,7 @@ describe("scheduler", () => {
 
     await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
     expect(refresh).toHaveBeenCalledTimes(2);
-    stop();
+    await stop();
     await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
     expect(refresh).toHaveBeenCalledTimes(2);
   });
