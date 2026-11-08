@@ -1,0 +1,40 @@
+web/src/App.tsx
+  s_09dc71dc6910e0::t_926569a19f6885 127
+  s_09dc71dc6910e0::t_b66bf5f7089563 50
+  s_09dc71dc6910e0::t_d4eaf0996f0cae 125-126
+  s_09dc71dc6910e0::t_35a53456540f89 35,38-39
+  s_09dc71dc6910e0::t_65164722de6eb8 7
+  s_09dc71dc6910e0::t_8ee82720a74447 33-34,40,43-44,46-48,57-61,65-66,70-71,73-75,77
+  s_09dc71dc6910e0::t_409bd6dae375fd 116-120
+  s_09dc71dc6910e0::t_6b3ead9b3e7ed7 1
+web/src/ManualRefreshButton.tsx
+  s_09dc71dc6910e0::t_19f264959f80b6 13
+  s_09dc71dc6910e0::t_34d698b6e46dbb 7
+  s_09dc71dc6910e0::t_a032b7aba1ee93 3
+web/src/App.test.tsx
+  s_09dc71dc6910e0::t_9ec04904781557 93-113,119-134,137-138
+  s_09dc71dc6910e0::t_f6ea2fd21c9fa5 136
+  s_09dc71dc6910e0::t_8bb787eb92d7e6 139-168
+  s_09dc71dc6910e0::t_7da3712abd0ca3 1
+  s_09dc71dc6910e0::t_ae7873558c2165 24
+  s_09dc71dc6910e0::t_4f005bfcf90471 135
+  s_09dc71dc6910e0::t_8dce9b4c17bc94 114-118
+web/src/styles.css
+  s_09dc71dc6910e0::t_cc2888db3be097 75-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "f13dbc7b4e14eab2c58d13ddd43a4d99647f9851",
+  "prompts": {},
+  "sessions": {
+    "s_09dc71dc6910e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cbfa92e1-007c-4bcf-b3ad-11434ee36681",
+        "model": "codex/gpt-6-luna"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
