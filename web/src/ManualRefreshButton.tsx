@@ -1,15 +1,16 @@
 interface ManualRefreshButtonProps {
   isRefreshing: boolean;
+  isDisabled: boolean;
   onRefresh: () => void;
 }
 
-export function ManualRefreshButton({ isRefreshing, onRefresh }: ManualRefreshButtonProps) {
+export function ManualRefreshButton({ isRefreshing, isDisabled, onRefresh }: ManualRefreshButtonProps) {
   return (
     <button
       className="refresh-button"
       type="button"
       onClick={onRefresh}
-      disabled={isRefreshing}
+      disabled={isRefreshing || isDisabled}
     >
       <span className={isRefreshing ? "refresh-icon is-spinning" : "refresh-icon"} aria-hidden="true">
         ↻

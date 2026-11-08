@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -21,6 +21,7 @@ const latest = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("热点看板", () => {
@@ -88,5 +89,81 @@ describe("热点看板", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("热点暂时无法获取");
     expect(screen.getByText("春日通勤穿搭")).toBeInTheDocument();
+  });
+
+  it("初次加载完成前禁用手动刷新", async () => {
+    let resolveInitialRequest: (response: Response) => void = () => undefined;
+    const initialRequest = new Promise<Response>((resolve) => {
+      resolveInitialRequest = resolve;
+    });
+    const fetchMock = vi.fn().mockReturnValue(initialRequest);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    const refreshButton = screen.getByRole("button", { name: "手动刷新" });
+    expect(refreshButton).toBeDisabled();
+
+    resolveInitialRequest(Response.json(latest));
+    expect(await screen.findByText("春日通勤穿搭")).toBeInTheDocument();
+    expect(refreshButton).toBeEnabled();
+  });
+
+  it("页面打开时定期同步服务端热点", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const refreshedAt = "2026-11-07T09:00:00.000Z";
+    const refreshed = {
+      fetchedAt: refreshedAt,
+      topics: [{ ...latest.topics[0], title: "周末城市漫游", fetchedAt: refreshedAt }],
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json(latest))
+      .mockResolvedValue(Response.json(refreshed));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByText("春日通勤穿搭")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(screen.getByText("周末城市漫游")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("热点列表已更新，1 个话题");
+    expect(screen.getByRole("status")).toHaveTextContent(refreshedAt);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("自动同步尚未完成时跳过后续轮询", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let resolvePollingRequest: (response: Response) => void = () => undefined;
+    const pollingRequest = new Promise<Response>((resolve) => {
+      resolvePollingRequest = resolve;
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json(latest))
+      .mockReturnValue(pollingRequest);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    resolvePollingRequest(Response.json(latest));
+    await act(async () => {
+      await Promise.resolve();
+    });
   });
 });

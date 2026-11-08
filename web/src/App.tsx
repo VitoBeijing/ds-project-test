@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HotTopicList } from "./HotTopicList";
 import { ManualRefreshButton } from "./ManualRefreshButton";
 import type { LatestTopics } from "./topics";
 
 const EMPTY_TOPICS: LatestTopics = { topics: [], fetchedAt: null };
+const TOPICS_POLL_INTERVAL_MS = 60_000;
 
 async function readTopics(path: string, init?: RequestInit): Promise<LatestTopics> {
   const response = init ? await fetch(path, init) : await fetch(path);
@@ -29,30 +30,51 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const latestRequest = useRef(0);
+  const isRefreshingRef = useRef(false);
+  const isLoadingTopicsRef = useRef(false);
 
   const loadTopics = useCallback(async () => {
+    if (isLoadingTopicsRef.current) return;
+    isLoadingTopicsRef.current = true;
+    const requestId = ++latestRequest.current;
     setErrorMessage(null);
     try {
-      setData(await readTopics("/api/hot-topics"));
+      const latest = await readTopics("/api/hot-topics");
+      if (requestId === latestRequest.current) setData(latest);
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : "热点暂时无法获取，请稍后重试。");
+      if (requestId === latestRequest.current) {
+        setErrorMessage(error instanceof Error ? error.message : "热点暂时无法获取，请稍后重试。");
+      }
     } finally {
+      isLoadingTopicsRef.current = false;
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void loadTopics();
+    const intervalId = window.setInterval(() => {
+      if (!isRefreshingRef.current) void loadTopics();
+    }, TOPICS_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
   }, [loadTopics]);
 
   const refreshTopics = async () => {
+    const requestId = ++latestRequest.current;
+    isRefreshingRef.current = true;
     setIsRefreshing(true);
     setErrorMessage(null);
     try {
-      setData(await readTopics("/api/hot-topics/refresh", { method: "POST" }));
+      const latest = await readTopics("/api/hot-topics/refresh", { method: "POST" });
+      if (requestId === latestRequest.current) setData(latest);
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : "刷新失败，请稍后重试。");
+      if (requestId === latestRequest.current) {
+        setErrorMessage(error instanceof Error ? error.message : "刷新失败，请稍后重试。");
+      }
     } finally {
+      isRefreshingRef.current = false;
       setIsRefreshing(false);
     }
   };
@@ -91,11 +113,18 @@ export default function App() {
             <p className="eyebrow">TRENDING NOW <span className="heading-period">/ 今日趋势</span></p>
             <h2 id="topics-heading">正在升温的话题<span className="heading-count">{topicCount}</span></h2>
           </div>
-          <ManualRefreshButton isRefreshing={isRefreshing} onRefresh={() => void refreshTopics()} />
+          <ManualRefreshButton
+            isRefreshing={isRefreshing}
+            isDisabled={isLoading}
+            onRefresh={() => void refreshTopics()}
+          />
         </div>
 
         <div className="feed-meta">
           <span>主题 / 热度 / 更新时间</span>
+          <span className="sr-only" role="status" aria-atomic="true">
+            热点列表已更新，{data.topics.length} 个话题；更新时间 {data.fetchedAt ?? "未知"}
+          </span>
           <span>最近更新　{formatLastUpdated(data.fetchedAt)}</span>
         </div>
 
