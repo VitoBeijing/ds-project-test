@@ -6,7 +6,7 @@ function createContext(cookies: Array<{ name: string; value: string }>) {
     cookies: vi.fn(async () => cookies),
     close: vi.fn(async () => undefined),
     newPage: vi.fn(async () => ({ goto: vi.fn(async () => undefined) })),
-    on: vi.fn(),
+    once: vi.fn(),
   };
 }
 
@@ -37,7 +37,7 @@ describe("Xiaohongshu session", () => {
 
   it("opens a headed browser at Xiaohongshu for manual login", async () => {
     const context = createContext([]);
-    context.on.mockImplementation((_event, callback: () => void) => callback());
+    context.once.mockImplementation((_event, callback: () => void) => callback());
     const launch = vi.fn(async () => context);
     const session = createXhsSessionManager({ launchPersistentContext: launch });
 

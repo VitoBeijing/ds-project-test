@@ -39,12 +39,13 @@ async function withApi(
 describe("hot topics API", () => {
   it("GET source 返回当前数据源、登录状态和最近抓取时间", async () => {
     await withApi(async (baseUrl) => {
+      await fetch(`${baseUrl}/api/hot-topics/refresh`, { method: "POST" });
       const response = await fetch(`${baseUrl}/api/hot-topics/source`);
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({
         source: "fixture",
         loggedIn: true,
-        lastFetchedAt: null,
+        lastFetchedAt: "2026-11-07T09:00:00.000Z",
       });
     }, { source: "fixture", isLoggedIn: async () => true });
   });
