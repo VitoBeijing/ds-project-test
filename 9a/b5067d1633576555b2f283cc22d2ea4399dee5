@@ -1,0 +1,47 @@
+server/src/index.ts
+  s_5a7ac03f9f0d0d::t_7f0147904db51e 22-24,26-29
+  s_5a7ac03f9f0d0d::t_6687d4f12bb314 7
+server/src/api.ts
+  s_5a7ac03f9f0d0d::t_34aedb1a80475c 22-35
+  s_5a7ac03f9f0d0d::t_335094784e5da8 5-9,11-15
+server/src/session.test.ts
+  s_5a7ac03f9f0d0d::t_2e04dec7ca6b99 40
+  s_5a7ac03f9f0d0d::t_9fc79192afb1a9 9
+server/src/api.test.ts
+  s_5a7ac03f9f0d0d::t_d80156738f4981 42,48
+pnpm-lock.yaml
+  s_b2808e73709892::t_73dc9764ac4347 23-25,36-38,212-217,224-229,236-241,248-253,260-265,272-277,284-289,296-301,308-313,320-325,332-337,344-349,356-361,368-373,380-385,392-397,404-415,422-433,440-451,458-463,470-475,482-487,494-499,1027-1031,1307-1316,1523-1527,1825-1827,1831-1833,1837-1839,1843-1845,1849-1851,1855-1857,1861-1863,1867-1869,1873-1875,1879-1881,1885-1887,1891-1893,1897-1899,1903-1905,1909-1911,1915-1917,1921-1926,1930-1935,1939-1944,1948-1950,1954-1956,1960-1962,1966-1968,2468-2496,2778-2783,3049-3053
+server/package.json
+  s_5a7ac03f9f0d0d::t_675d2db6748999 15-16,22
+  s_5a7ac03f9f0d0d::t_71afc90e55ef55 9
+server/src/login.ts
+  s_5a7ac03f9f0d0d::t_58cd66efb5132e 1-2,5-6,8-11
+  s_b2808e73709892::t_056d5792df3403 3-4,7
+server/src/session.ts
+  s_5a7ac03f9f0d0d::t_5dad58117f8790 1-47,54-62,78-92
+  s_5a7ac03f9f0d0d::t_011b49a1a4f337 48-53,63-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "9ab5067d1633576555b2f283cc22d2ea4399dee5",
+  "prompts": {},
+  "sessions": {
+    "s_5a7ac03f9f0d0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9485e88c-3608-408c-9893-f38756774108",
+        "model": "codex/gpt-6-luna"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    },
+    "s_b2808e73709892": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "721d1780-0a09-4e15-ad03-67ad65311a95",
+        "model": "ada-cli-golang-ctripcorp/claude-glm-5.3"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
