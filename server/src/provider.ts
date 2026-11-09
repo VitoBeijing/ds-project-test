@@ -6,6 +6,14 @@ export interface HotTopicProvider {
   fetch(): Promise<ProviderTopic[]>;
 }
 
+/** 登录态缺失或会话失效。service 遇到此错误不降级到样例数据；API 据此返回 401，不静默。 */
+export class LoginRequiredError extends Error {
+  constructor() {
+    super("需要登录");
+    this.name = "LoginRequiredError";
+  }
+}
+
 /** 样例热点：数据形状合法、无外部依赖，用于在真实数据源接入前保证「列表非空 + 字段完整」可验收。 */
 const FIXTURE_TOPICS: readonly ProviderTopic[] = [
   { title: "夏日穿搭", rank: 1, heat: 980000, category: "穿搭" },

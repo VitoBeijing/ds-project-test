@@ -8,6 +8,7 @@ import { createXhsSessionManager } from "./session.js";
 import { startScheduler } from "./scheduler.js";
 import { createHotTopicService } from "./service.js";
 import { createStore, openDb } from "./store.js";
+import { XiaohongshuProvider } from "./xiaohongshu.js";
 
 const port = readPort(process.env.PORT);
 const intervalMinutes = readRefreshIntervalMinutes(process.env.REFRESH_INTERVAL_MINUTES);
@@ -19,9 +20,13 @@ const databasePath = process.env.DATABASE_PATH ?? defaultDatabasePath;
 mkdirSync(dirname(databasePath), { recursive: true });
 const db = openDb(databasePath);
 const store = createStore(db);
-const provider = new FixtureProvider();
+const provider = new XiaohongshuProvider();
 const session = createXhsSessionManager();
-const service = createHotTopicService(provider, store);
+const service = createHotTopicService({
+  provider,
+  fallback: new FixtureProvider(),
+  store,
+});
 const stopScheduler = startScheduler(service.refresh, intervalMinutes);
 const server = createApi(service, store, {
   source: provider.name,
