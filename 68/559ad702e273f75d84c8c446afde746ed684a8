@@ -1,0 +1,23 @@
+server/src/session.test.ts
+  s_5a7ac03f9f0d0d::t_b77a7d9f68bfaa 1-49
+server/src/api.test.ts
+  s_5a7ac03f9f0d0d::t_faa6afa284f00e 40-62
+  s_5a7ac03f9f0d0d::t_0fcd948df21107 25
+  s_5a7ac03f9f0d0d::t_44ed3c9b87be1c 7-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "68559ad702e273f75d84c8c446afde746ed684a8",
+  "prompts": {},
+  "sessions": {
+    "s_5a7ac03f9f0d0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9485e88c-3608-408c-9893-f38756774108",
+        "model": "codex/gpt-6-luna"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
