@@ -1,0 +1,47 @@
+server/src/service.test.ts
+  s_3bad156bd5c924::t_06d9f364764edb 3,17,43,57-58,60,71-72,74,79-132
+server/src/session.ts
+  s_3bad156bd5c924::t_48a00d17612a4d 6,10-16
+  s_3bad156bd5c924::t_d4473c924854b0 90
+  s_3bad156bd5c924::t_f592bb45035aae 8-9
+  s_3bad156bd5c924::t_0f3e18c0fb5ffa 65
+server/src/service.ts
+  s_3bad156bd5c924::t_05c440af3c1c0d 53,55
+  s_3bad156bd5c924::t_10efffd3f47a53 1-2,8-17,19-23,25-27,29-36,38-47
+  s_3bad156bd5c924::t_a609fb26d43805 18,28,37
+server/src/api.test.ts
+  s_3bad156bd5c924::t_e1f061c2adebcc 3-5,10-13,18-26,28-31,56,67,100-109
+  s_3bad156bd5c924::t_2ede0337a8c3c2 2
+server/src/xiaohongshu.ts
+  s_3bad156bd5c924::t_f647266926a123 1-3,5-8,12-14,17-18,22-24,34-38,41-73,83-84,86-88,90-130,140-168,170-179,181-183,185-187
+  s_3bad156bd5c924::t_2e08c9db64d1f7 4,9-11,15-16,19-21,25-33,39-40,74-82,85,89,131-139,169,180,184
+server/src/xiaohongshu.test.ts
+  s_3bad156bd5c924::t_33bfd2d7f68193 38-46,54,61-62,76
+  s_3bad156bd5c924::t_908ec3c9e35d33 121-122
+  s_3bad156bd5c924::t_3eb0b9eb202f56 194-214
+  s_3bad156bd5c924::t_5a2549ee0d5497 1-37,47-53,55-60,63-75,77-120,123-193,215-246
+server/src/index.ts
+  s_3bad156bd5c924::t_a891540e2bb8c7 23,25-29
+  s_3bad156bd5c924::t_839eff19ce3e8d 11
+server/src/api.ts
+  s_3bad156bd5c924::t_688f1d920f06e0 41-44
+  s_3bad156bd5c924::t_52b396b4194a30 2
+server/src/provider.ts
+  s_3bad156bd5c924::t_11190c99d666c8 9-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "faebd9566914a10d83861aa207d10d4600e7677b",
+  "prompts": {},
+  "sessions": {
+    "s_3bad156bd5c924": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "66d1290f-a046-4eda-905b-e26a8ec34f60",
+        "model": "ada-cli-golang-ctripcorp/claude-glm-5.3"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
