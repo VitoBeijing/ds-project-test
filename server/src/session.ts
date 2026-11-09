@@ -3,8 +3,17 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type BrowserContext } from "playwright";
 
+/** 小红书登录态 cookie 名。 */
 const SESSION_COOKIE_NAME = "web_session";
-const XHS_LOGIN_URL = "https://www.xiaohongshu.com/explore";
+/** 小红书「发现」页：未登录时展示登录入口，登录后展示热搜列表（登录入口与真实热点抓取共用）。 */
+export const XHS_EXPLORE_URL = "https://www.xiaohongshu.com/explore";
+
+/** profile 中是否存在有效的 web_session cookie（登录入口与真实热点抓取共用此判定）。 */
+export function hasWebSessionCookie(cookies: Array<{ name: string; value: string }>): boolean {
+  return cookies.some(
+    (cookie) => cookie.name === SESSION_COOKIE_NAME && cookie.value.length > 0,
+  );
+}
 
 export const DEFAULT_XHS_PROFILE_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -53,10 +62,7 @@ export function createXhsSessionManager({
     const currentCheck = (async (): Promise<boolean> => {
       const context = await openContext(true);
       try {
-        const cookies = await context.cookies();
-        return cookies.some(
-          (cookie) => cookie.name === SESSION_COOKIE_NAME && cookie.value.length > 0,
-        );
+        return hasWebSessionCookie(await context.cookies());
       } finally {
         await context.close();
       }
@@ -81,7 +87,7 @@ export function createXhsSessionManager({
       try {
         const closed = new Promise<void>((resolveClose) => context.once("close", resolveClose));
         const page = await context.newPage();
-        await page.goto(XHS_LOGIN_URL);
+        await page.goto(XHS_EXPLORE_URL);
         await closed;
       } catch (error: unknown) {
         await context.close();

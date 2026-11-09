@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import { LoginRequiredError } from "./provider.js";
 import type { HotTopicService } from "./service.js";
 import type { TopicStore } from "./store.js";
 
@@ -37,6 +38,10 @@ export function createApi(
     try {
       response.json(await service.refresh());
     } catch (error: unknown) {
+      if (error instanceof LoginRequiredError) {
+        response.status(401).json({ error: error.message });
+        return;
+      }
       console.error("热点刷新失败", error);
       response.status(500).json({ error: "热点刷新失败" });
     }

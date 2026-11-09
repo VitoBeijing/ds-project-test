@@ -1,28 +1,34 @@
 import { createServer, type Server } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
-import { createApi } from "./api.js";
-import { createHotTopicService } from "./service.js";
+import { describe, expect, it } from "vitest";
+import { createApi, type SourceStatusOptions } from "./api.js";
+import { LoginRequiredError } from "./provider.js";
+import { createHotTopicService, type HotTopicService } from "./service.js";
 import { createStore, openDb } from "./store.js";
 
 async function withApi(
   run: (baseUrl: string) => Promise<void>,
-  options?: { source: string; isLoggedIn: () => Promise<boolean> },
+  options: {
+    sourceStatus?: SourceStatusOptions;
+    service?: HotTopicService;
+  } = {},
 ): Promise<void> {
   const db = openDb();
   const store = createStore(db);
   let fetchCount = 0;
-  const service = createHotTopicService(
-    {
-      name: "fixture",
-      fetch: async () => {
-        fetchCount += 1;
-        return [{ title: `主题 ${fetchCount}`, rank: fetchCount }];
+  const service =
+    options.service ??
+    createHotTopicService({
+      provider: {
+        name: "fixture",
+        fetch: async () => {
+          fetchCount += 1;
+          return [{ title: `主题 ${fetchCount}`, rank: fetchCount }];
+        },
       },
-    },
-    store,
-    () => new Date(`2026-11-07T${String(8 + fetchCount).padStart(2, "0")}:00:00.000Z`),
-  );
-  const server = createServer(createApi(service, store, options));
+      store,
+      now: () => new Date(`2026-11-07T${String(8 + fetchCount).padStart(2, "0")}:00:00.000Z`),
+    });
+  const server = createServer(createApi(service, store, options.sourceStatus));
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("API server did not start");
@@ -47,7 +53,7 @@ describe("hot topics API", () => {
         loggedIn: true,
         lastFetchedAt: "2026-11-07T09:00:00.000Z",
       });
-    }, { source: "fixture", isLoggedIn: async () => true });
+    }, { sourceStatus: { source: "fixture", isLoggedIn: async () => true } });
   });
 
   it("GET source 返回未登录状态", async () => {
@@ -58,7 +64,7 @@ describe("hot topics API", () => {
         loggedIn: false,
         lastFetchedAt: null,
       });
-    }, { source: "xiaohongshu", isLoggedIn: async () => false });
+    }, { sourceStatus: { source: "xiaohongshu", isLoggedIn: async () => false } });
   });
 
   it("空数据返回空列表和 null 更新时间", async () => {
@@ -89,6 +95,18 @@ describe("hot topics API", () => {
         topics: [{ title: "主题 2" }],
         fetchedAt: "2026-11-07T10:00:00.000Z",
       });
+    });
+  });
+
+  it("POST 刷新遇到「需要登录」时返回 401，不静默降级", async () => {
+    await withApi(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/hot-topics/refresh`, { method: "POST" });
+      expect(response.status).toBe(401);
+      expect(await response.json()).toEqual({ error: "需要登录" });
+    }, {
+      service: {
+        refresh: () => Promise.reject(new LoginRequiredError()),
+      },
     });
   });
 });
