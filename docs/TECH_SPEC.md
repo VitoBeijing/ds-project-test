@@ -1,8 +1,11 @@
 # 技术方案：自媒体运营工作台（小红书 · 热点获取）
 
-- 状态：已批准（2026-11-07）
+- 状态：已批准（第二轮「真实数据源接入」，2026-11-09）
 - 作者：TechLead Bot
-- 依据：docs/PRD.md（已批准 2026-11-07）；本轮试跑无设计阶段，DESIGN.md 留草稿，PRD 直接进技术方案
+- 变更记录：
+  - v1（已批准 2026-11-07，已交付）：热点获取模块，本地 Fixture 样例数据跑通「获取 → 存储 → 看板」
+  - v2（本版，待批准）：真实数据源接入，爬虫 / 浏览器自动化 + 用户小红书账号替换样例数据
+- 依据：docs/PRD.md（v2，2026-11-08）；DESIGN.md 留草稿，PRD 直接进技术方案
 
 ## 概述
 
@@ -144,3 +147,98 @@ US-4（主题筛选，P1，PRD 标注“待确认后启用”）本轮不建 Iss
 
 - [产品/合规] 真实热点数据来源方向（官方 vs 第三方 vs 公开榜单）——PRD 未决问题#4。本方案先用 FixtureProvider 不阻塞开发，真实来源接入需 Chief 用 ask_user 与用户确认合规方向，确认后我再拆 WU。
 - [范围] US-4「主题筛选」何时启用——PRD 未决问题#1 推荐“先做平台级热搜榜，赛道筛选作为下一步”，本方案按此默认执行；若用户要提前，交给 Chief。
+
+---
+
+# 第二轮：真实数据源接入（v2）
+
+- 状态：已批准（2026-11-09）
+- 依据：docs/PRD.md v2「真实数据源接入」；用户明确「爬虫 / 浏览器自动化 + 自有小红书账号，暂缓合规、先跑通」
+
+## 概述
+
+把第一轮的 `FixtureProvider` 换成真实小红书热点：用 Playwright 浏览器自动化 + 用户小红书账号的登录会话，抓取小红书当前真实热点，经「抓取 → 归一 → 落库」链路写进 `topics` 表，让「热点看板」展示真实数据。合规按 PRD「暂缓合规、先跑通」声明执行。
+
+## 技术选型增量
+
+| 项 | 选型 |
+| --- | --- |
+| 浏览器自动化 | Playwright（chromium），服务端驱动 |
+| 登录会话 | 持久化浏览器 profile（`userDataDir`）复用登录态，不存账密明文 |
+| 数据源 | 「真实热点源」模块 = `XiaohongshuProvider`，实现 `HotTopicProvider`，`name='xiaohongshu'` |
+| 依赖 | `server/` 新增 `playwright`；`FixtureProvider` 保留作测试 / 降级 |
+
+## 架构增量
+
+```
+热点看板（web/ React）
+   │  GET /api/hot-topics       GET /api/hot-topics/source
+   │  POST /api/hot-topics/refresh
+   ▼
+server/ Express API（热点获取 + 真实热点源）
+   │
+   ├── scheduler ──► service ──► Provider 适配层
+   │                                ├── XiaohongshuProvider（真实热点源，Playwright 抓取）
+   │                                └── FixtureProvider（测试 / 降级）
+   └── 登录入口（headed 浏览器手动登录）→ 持久化 profile：server/data/xhs-profile/
+```
+
+## 数据结构
+
+- `topics` 表不变；`source` 新增取值 `'xiaohongshu'`。
+- 登录会话由浏览器 profile 目录持久化（`server/data/xhs-profile/`，已 gitignore），不新增数据库表、不存账密。
+
+## HTTP 接口增量
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/hot-topics/source` | 返回 `{ source: 'xiaohongshu'\|'fixture', loggedIn: boolean, lastFetchedAt: string\|null }`，前端据此显示「需要登录」提示 |
+| POST | `/api/hot-topics/refresh` | 语义不变；会话失效时返回 401 `{ error: '需要登录' }`，前端提示重新登录 |
+
+登录本身不提供账密表单：手动 `pnpm -C server login` 打开 headed 浏览器到小红书登录页，用户登录后会话落盘到 profile 目录。
+
+## 登录与会话
+
+- 手动登录：`pnpm -C server login` → headed 浏览器 → 用户登录 → cookie 落 `server/data/xhs-profile/`。
+- 抓取：`XiaohongshuProvider` 用同一 profile 启动浏览器，检测登录态；未登录抛「需要登录」。
+- 会话失效：抓取时被跳转到登录页 / 无登录态 → 抛「需要登录」→ API 401 → 前端提示重新登录，不静默失败、不用样例冒充真实数据。
+
+## 抓取与字段映射
+
+- 抓取目标：小红书「发现 / 热搜」页，抓取主题名、排名、热度。
+- 字段映射：主题名→`title`；排名→`rank`；热度→`heat`（平台无独立热度值时 `heat` 留空，仍满足「热度或排名」）；`category` 暂空（US-4 后置）。
+- 抓取频率：沿用 `REFRESH_INTERVAL_MINUTES`（默认 60 分钟，低频观察风控）。
+
+## 风险与取舍
+
+| 风险 | 应对 |
+| --- | --- |
+| 账号风控 / 封号（高频抓取） | 沿用低频（默认 1 小时）；单用户本地；PRD 合规声明「暂缓、先跑通」 |
+| 小红书页面结构变化 → 选择器失效 | 选择器集中在 Provider 内定义；抓取失败返回明确错误，不静默 |
+| 会话失效 | 登录态检测 + 401 + 前端「需要登录」提示 |
+| 合规 | PRD 已声明暂缓；对外 / 上线前须另行做合规与账号安全评估 |
+
+## 测试策略
+
+- `XiaohongshuProvider`：用离线 fixture HTML 或 mock Playwright 单测，覆盖字段映射、未登录检测、空结果，不依赖真实网络 / 账号。
+- 会话状态端点：`loggedIn` 判断、401 分支。
+- 组件测试：看板「需要登录」提示、真实来源标识、会话失效「重新登录」提示。
+- 手工验收：手动登录 → 看板显示真实热点；登出 → 看板提示重新登录。
+
+## 工作单元拆分（线性依赖）
+
+| 编号 | 工作单元 | 依赖 | Issue |
+| --- | --- | --- | --- |
+| WU-5 | 浏览器自动化基建 + 登录会话（Playwright 持久化 profile、`pnpm -C server login` 入口、登录态检测 + `GET /api/hot-topics/source`） | WU-4 | #13 |
+| WU-6 | 真实热点源 Provider（`XiaohongshuProvider` 抓取真实热点 + 字段映射，接入 service 作为主源，Fixture 降级） | WU-5 | #14 |
+| WU-7 | 前端登录状态与真实来源提示（看板「需要登录」、会话失效重新登录、真实来源标识） | WU-6 | #15 |
+
+## 合规声明
+
+本轮经用户明确要求「暂不考虑信息合规问题，先跑通流程」，采用爬虫 / 浏览器自动化 + 用户自有账号。对外使用或上线前须另行做合规与账号安全评估。
+
+## 未决问题（沿用 PRD 未决问题，不阻塞）
+
+- 登录方式：手动登录 + 复用浏览器会话（推荐，不接触账密明文）。
+- 抓取目标页与选择器：实现时按当前小红书页面结构确定，需真机调试。
+- 抓取频率：沿用默认每 1 小时。
