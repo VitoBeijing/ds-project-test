@@ -299,6 +299,39 @@ describe("collectTheme", () => {
       createThemeService({ source, store: createThemeStore(openDb()), searchLimit: 1.5 }),
     ).toThrow(/正整数/);
   });
+
+  it("topN 非正整数时构造服务直接抛错", () => {
+    const source: XhsDataSource = { searchFeeds: vi.fn(), getFeedDetail: vi.fn() };
+    expect(() =>
+      createThemeService({ source, store: createThemeStore(openDb()), topN: 0 }),
+    ).toThrow(/正整数/);
+    expect(() =>
+      createThemeService({ source, store: createThemeStore(openDb()), topN: 1.5 }),
+    ).toThrow(/正整数/);
+  });
+
+  it("收集完成后生成并落库深度报告（簇概览 + 高价值清单 + 结论）", async () => {
+    const { service, store } = createFixture();
+
+    const result = await service.collectTheme("通勤穿搭");
+
+    const report = store.getReport(result.themeId);
+    expect(report).not.toBeNull();
+    expect(report?.clusterSummary).toEqual([
+      { label: "通勤穿搭", noteCount: 2 },
+      { label: "秋冬穿搭", noteCount: 1 },
+      { label: "其他", noteCount: 1 },
+    ]);
+    expect(report?.highValueNotes.map((item) => item.feedId)).toEqual([
+      "feed-a",
+      "feed-b",
+      "feed-c",
+    ]);
+    expect(report?.highValueNotes[0]).toMatchObject({ feedId: "feed-a", score: 14391 });
+    expect(report?.conclusion).toBe(
+      "最高互动簇：通勤穿搭；高价值内容共同标签：无；平均互动量：4722.0",
+    );
+  });
 });
 
 describe("buildClusters", () => {

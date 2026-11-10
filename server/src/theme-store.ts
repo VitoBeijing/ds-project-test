@@ -53,6 +53,42 @@ export interface StoredCluster {
   readonly noteIds: number[];
 }
 
+/** 内容簇概览（收集结果与深度报告共用）。label 即代表关键词（按标签建簇）。 */
+export interface ClusterSummary {
+  readonly label: string;
+  readonly noteCount: number;
+}
+
+/** 高价值内容清单条目：互动数据 + 加权 score。author / publishedAt / url 可空（notes 表同）。 */
+export interface HighValueNote {
+  readonly feedId: string;
+  readonly title: string;
+  readonly author: string | null;
+  readonly likeCount: number;
+  readonly collectCount: number;
+  readonly commentCount: number;
+  readonly score: number;
+  readonly tags: string[];
+  readonly publishedAt: string | null;
+  readonly url: string | null;
+}
+
+/** 主题深度报告内容（reports 表 JSON 列的解析形态）。字段名与技术方案一致。 */
+export interface ThemeReport {
+  readonly clusterSummary: ClusterSummary[];
+  readonly highValueNotes: HighValueNote[];
+  readonly conclusion: string;
+}
+
+/** reports 表记录（clusterSummary / highValueNotes 已从 JSON 解析）。 */
+export interface StoredReport {
+  readonly themeId: number;
+  readonly clusterSummary: ClusterSummary[];
+  readonly highValueNotes: HighValueNote[];
+  readonly conclusion: string;
+  readonly generatedAt: string;
+}
+
 export interface ThemeStore {
   /** 新建主题（status = collecting），返回自增 id。 */
   createTheme(keyword: string, createdAt: string): number;
@@ -70,6 +106,10 @@ export interface ThemeStore {
   listNotes(themeId: number): StoredNote[];
   /** 主题下的内容簇（按写入顺序），含簇内笔记 id；无数据返回空数组。 */
   listClusters(themeId: number): StoredCluster[];
+  /** 写入（或覆盖）主题的深度报告。 */
+  saveReport(themeId: number, report: ThemeReport, generatedAt: string): void;
+  /** 读取主题的深度报告；不存在返回 null。 */
+  getReport(themeId: number): StoredReport | null;
 }
 
 /** 主题深挖四表（TECH_SPEC v3「数据结构」）。独立于旧 topics 模块，互不影响。 */
@@ -103,6 +143,13 @@ CREATE TABLE IF NOT EXISTS cluster_notes (
   cluster_id INTEGER NOT NULL REFERENCES clusters(id),
   note_id    INTEGER NOT NULL REFERENCES notes(id)
 );
+CREATE TABLE IF NOT EXISTS reports (
+  theme_id         INTEGER PRIMARY KEY REFERENCES themes(id),
+  cluster_summary  TEXT,
+  high_value_notes TEXT,
+  conclusion       TEXT,
+  generated_at     TEXT
+);
 `;
 
 interface ThemeRow {
@@ -132,6 +179,15 @@ interface ClusterJoinRow {
   theme_id: number;
   label: string;
   note_id: number | null;
+}
+
+/** reports 表原始行：JSON 列保持文本，读取时再解析。 */
+interface ReportRow {
+  theme_id: number;
+  cluster_summary: string | null;
+  high_value_notes: string | null;
+  conclusion: string | null;
+  generated_at: string | null;
 }
 
 function assertNoteValid(note: NewNote): void {
@@ -198,7 +254,87 @@ function toStoredNote(row: NoteRow): StoredNote {
   };
 }
 
-/** 打开主题深挖四表（themes / notes / clusters / cluster_notes），已存在则跳过。 */
+/** reports.cluster_summary（JSON 数组文本）→ ClusterSummary[]；null 视作空数组，非法抛错不静默。 */
+function parseClusterSummary(raw: string | null): ClusterSummary[] {
+  if (raw === null) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`reports.cluster_summary 不是合法的 JSON：${raw}`);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error(`reports.cluster_summary 不是合法的 JSON 数组：${raw}`);
+  }
+  return parsed.map((item, index) => {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      throw new Error(`reports.cluster_summary 第 ${index} 条不是对象`);
+    }
+    const record = item as Record<string, unknown>;
+    if (typeof record.label !== "string" || typeof record.noteCount !== "number") {
+      throw new Error(`reports.cluster_summary 第 ${index} 条缺少 label / noteCount`);
+    }
+    return { label: record.label, noteCount: record.noteCount };
+  });
+}
+
+function parseNullableString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+/** reports.high_value_notes（JSON 数组文本）→ HighValueNote[]；null 视作空数组，非法抛错不静默。 */
+function parseHighValueNotes(raw: string | null): HighValueNote[] {
+  if (raw === null) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`reports.high_value_notes 不是合法的 JSON：${raw}`);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error(`reports.high_value_notes 不是合法的 JSON 数组：${raw}`);
+  }
+  return parsed.map((item, index) => {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      throw new Error(`reports.high_value_notes 第 ${index} 条不是对象`);
+    }
+    const record = item as Record<string, unknown>;
+    const counts = ["likeCount", "collectCount", "commentCount", "score"] as const;
+    if (
+      typeof record.feedId !== "string" ||
+      typeof record.title !== "string" ||
+      counts.some((key) => typeof record[key] !== "number") ||
+      !Array.isArray(record.tags) ||
+      record.tags.some((tag) => typeof tag !== "string")
+    ) {
+      throw new Error(`reports.high_value_notes 第 ${index} 条字段非法`);
+    }
+    return {
+      feedId: record.feedId,
+      title: record.title,
+      author: parseNullableString(record.author),
+      likeCount: record.likeCount as number,
+      collectCount: record.collectCount as number,
+      commentCount: record.commentCount as number,
+      score: record.score as number,
+      tags: record.tags as string[],
+      publishedAt: parseNullableString(record.publishedAt),
+      url: parseNullableString(record.url),
+    };
+  });
+}
+
+function toStoredReport(row: ReportRow): StoredReport {
+  return {
+    themeId: row.theme_id,
+    clusterSummary: parseClusterSummary(row.cluster_summary),
+    highValueNotes: parseHighValueNotes(row.high_value_notes),
+    conclusion: row.conclusion ?? "",
+    generatedAt: row.generated_at ?? "",
+  };
+}
+
+/** 打开主题深挖五表（themes / notes / clusters / cluster_notes / reports），已存在则跳过。 */
 export function createThemeStore(db: Db): ThemeStore {
   db.exec(SCHEMA);
 
@@ -237,6 +373,18 @@ export function createThemeStore(db: Db): ThemeStore {
     LEFT JOIN cluster_notes cn ON cn.cluster_id = c.id
     WHERE c.theme_id = @themeId
     ORDER BY c.id ASC, cn.note_id ASC
+  `);
+  const insertReport = db.prepare(`
+    INSERT OR REPLACE INTO reports (
+      theme_id, cluster_summary, high_value_notes, conclusion, generated_at
+    ) VALUES (
+      @themeId, @clusterSummary, @highValueNotes, @conclusion, @generatedAt
+    )
+  `);
+  const selectReport = db.prepare<{ themeId: number }, ReportRow>(`
+    SELECT theme_id, cluster_summary, high_value_notes, conclusion, generated_at
+    FROM reports
+    WHERE theme_id = @themeId
   `);
 
   const saveAll = db.transaction((themeId: number, notes: NewNote[], clusters: NewCluster[]) => {
@@ -312,6 +460,21 @@ export function createThemeStore(db: Db): ThemeStore {
         }
       }
       return clusters;
+    },
+
+    saveReport(themeId, report, generatedAt) {
+      insertReport.run({
+        themeId,
+        clusterSummary: JSON.stringify(report.clusterSummary),
+        highValueNotes: JSON.stringify(report.highValueNotes),
+        conclusion: report.conclusion,
+        generatedAt,
+      });
+    },
+
+    getReport(themeId) {
+      const row = selectReport.get({ themeId });
+      return row === undefined ? null : toStoredReport(row);
     },
   };
 }

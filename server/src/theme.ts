@@ -1,5 +1,9 @@
 import type { XhsFeedDetail, XhsSearchFeed } from "./xhs-mcp.js";
-import type { NewCluster, NewNote, ThemeStore } from "./theme-store.js";
+import { DEFAULT_TOP_N } from "./mine.js";
+import { buildThemeReport } from "./report.js";
+import type { ClusterSummary, NewCluster, NewNote, ThemeStore } from "./theme-store.js";
+
+export type { ClusterSummary } from "./theme-store.js";
 
 /** 每个主题默认检索的笔记数上限（PRD 未决问题#4 默认值：top 30）。 */
 export const DEFAULT_SEARCH_LIMIT = 30;
@@ -13,12 +17,6 @@ export interface XhsDataSource {
   getFeedDetail(feedId: string, xsecToken: string): Promise<XhsFeedDetail>;
 }
 
-/** 内容簇概览（收集结果用）。 */
-export interface ClusterSummary {
-  readonly label: string;
-  readonly noteCount: number;
-}
-
 /** collectTheme 结果：noteCount 为 0 即「检索不到内容」的明确空态。 */
 export interface CollectThemeResult {
   readonly themeId: number;
@@ -28,7 +26,7 @@ export interface CollectThemeResult {
 }
 
 export interface ThemeService {
-  /** 收集一个主题：检索 → 补详情 → 落库（四表）→ 内容簇。失败抛错并把主题标记为 failed。 */
+  /** 收集一个主题：检索 → 补详情 → 落库（五表）→ 内容簇 → 高价值挖掘 + 报告。失败抛错并把主题标记为 failed。 */
   collectTheme(keyword: string): Promise<CollectThemeResult>;
 }
 
@@ -37,6 +35,8 @@ export interface ThemeServiceOptions {
   store: ThemeStore;
   /** 检索规模上限，默认 30。 */
   searchLimit?: number;
+  /** 高价值清单条数（top N），默认 10。 */
+  topN?: number;
   now?: () => Date;
 }
 
@@ -83,19 +83,23 @@ function toNote(detail: XhsFeedDetail, search: XhsSearchFeed): NewNote {
 }
 
 /**
- * 主题收集服务（TECH_SPEC v3 WU-2）：关键词 → search_feeds 检索（top N，默认 30）
+ * 主题收集服务（TECH_SPEC v3 WU-2 + WU-3）：关键词 → search_feeds 检索（top N，默认 30）
  * → get_feed_detail 补互动数据 → 落库（themes/notes/clusters/cluster_notes）
- * → 按 tags 构建内容簇。检索不到返回 noteCount 0 的明确空态；任一环节失败把主题
- * 标记为 failed 并原样抛错，不静默、不落半批数据。
+ * → 按 tags 构建内容簇 → 高价值挖掘 + 深度报告落库（reports）。检索不到返回 noteCount 0
+ * 的明确空态；任一环节失败把主题标记为 failed 并原样抛错，不静默、不落半批数据。
  */
 export function createThemeService({
   source,
   store,
   searchLimit = DEFAULT_SEARCH_LIMIT,
+  topN = DEFAULT_TOP_N,
   now = () => new Date(),
 }: ThemeServiceOptions): ThemeService {
   if (!Number.isInteger(searchLimit) || searchLimit <= 0) {
     throw new Error(`searchLimit 需要正整数：${searchLimit}`);
+  }
+  if (!Number.isInteger(topN) || topN <= 0) {
+    throw new Error(`topN 需要正整数：${topN}`);
   }
 
   return {
@@ -113,18 +117,17 @@ export function createThemeService({
           notes.push(toNote(await source.getFeedDetail(feed.feedId, feed.xsecToken), feed));
         }
         const clusters = buildClusters(notes);
+        const report = buildThemeReport(notes, clusters, topN);
 
         store.saveNotesAndClusters(themeId, notes, clusters);
+        store.saveReport(themeId, report, now().toISOString());
         store.setThemeStatus(themeId, "done");
 
         return {
           themeId,
           keyword: trimmedKeyword,
           noteCount: notes.length,
-          clusters: clusters.map((cluster) => ({
-            label: cluster.label,
-            noteCount: cluster.feedIds.length,
-          })),
+          clusters: report.clusterSummary,
         };
       } catch (error) {
         store.setThemeStatus(themeId, "failed");
