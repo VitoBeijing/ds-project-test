@@ -8,6 +8,10 @@ import { createXhsSessionManager } from "./session.js";
 import { startScheduler } from "./scheduler.js";
 import { createHotTopicService } from "./service.js";
 import { createStore, openDb } from "./store.js";
+import { createThemeApi } from "./theme-api.js";
+import { createThemeStore } from "./theme-store.js";
+import { createThemeService } from "./theme.js";
+import { XhsMcpClient } from "./xhs-mcp.js";
 import { XiaohongshuProvider } from "./xiaohongshu.js";
 
 const port = readPort(process.env.PORT);
@@ -28,10 +32,24 @@ const service = createHotTopicService({
   store,
 });
 const stopScheduler = startScheduler(service.refresh, intervalMinutes);
-const server = createApi(service, store, {
+const app = createApi(service, store, {
   source: provider.name,
   isLoggedIn: session.isLoggedIn,
-}).listen(port, "127.0.0.1", () => {
+});
+const themeStore = createThemeStore(db);
+const xhsMcpClient = new XhsMcpClient();
+const themeService = createThemeService({ source: xhsMcpClient, store: themeStore });
+app.use(
+  createThemeApi({
+    themeService,
+    themeStore,
+    mcpStatus: {
+      source: "xiaohongshu",
+      checkLoginStatus: xhsMcpClient.checkLoginStatus.bind(xhsMcpClient),
+    },
+  }),
+);
+const server = app.listen(port, "127.0.0.1", () => {
   process.stdout.write(`热点获取 API 已启动：http://localhost:${port}\n`);
 });
 

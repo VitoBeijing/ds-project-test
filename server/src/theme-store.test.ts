@@ -276,3 +276,91 @@ describe("theme store", () => {
     ).toThrow(/重复关联/);
   });
 });
+
+describe("reports 表与报告存取", () => {
+  let db: Db;
+  let store: ThemeStore;
+  beforeEach(() => {
+    db = openDb();
+    store = createThemeStore(db);
+  });
+
+  it("reports 表包含 theme_id / cluster_summary / high_value_notes / conclusion / generated_at", () => {
+    const cols = (db.pragma("table_info(reports)") as { name: string }[]).map((c) => c.name);
+    expect(cols).toEqual(
+      expect.arrayContaining([
+        "theme_id",
+        "cluster_summary",
+        "high_value_notes",
+        "conclusion",
+        "generated_at",
+      ]),
+    );
+  });
+
+  it("saveReport 落库后可读回完整报告", () => {
+    const themeId = store.createTheme("通勤穿搭", CREATED_AT);
+    store.saveReport(
+      themeId,
+      {
+        clusterSummary: [{ label: "通勤穿搭", noteCount: 1 }],
+        highValueNotes: [
+          {
+            feedId: "feed-a",
+            title: "秋冬通勤穿搭灵感",
+            author: "穿搭笔记",
+            likeCount: 12000,
+            collectCount: 678,
+            commentCount: 345,
+            score: 14391,
+            tags: ["通勤穿搭"],
+            publishedAt: "2025-11-01T08:00:00.000Z",
+            url: "https://www.xiaohongshu.com/explore/feed-a",
+          },
+        ],
+        conclusion: "最高互动簇：通勤穿搭；高价值内容共同标签：通勤穿搭；平均互动量：1.0",
+      },
+      "2026-11-10T08:00:00.000Z",
+    );
+
+    expect(store.getReport(themeId)).toEqual({
+      themeId,
+      clusterSummary: [{ label: "通勤穿搭", noteCount: 1 }],
+      highValueNotes: [
+        {
+          feedId: "feed-a",
+          title: "秋冬通勤穿搭灵感",
+          author: "穿搭笔记",
+          likeCount: 12000,
+          collectCount: 678,
+          commentCount: 345,
+          score: 14391,
+          tags: ["通勤穿搭"],
+          publishedAt: "2025-11-01T08:00:00.000Z",
+          url: "https://www.xiaohongshu.com/explore/feed-a",
+        },
+      ],
+      conclusion: "最高互动簇：通勤穿搭；高价值内容共同标签：通勤穿搭；平均互动量：1.0",
+      generatedAt: "2026-11-10T08:00:00.000Z",
+    });
+  });
+
+  it("getReport 不存在时返回 null", () => {
+    expect(store.getReport(999)).toBeNull();
+  });
+
+  it("saveReport 覆盖同一主题的旧报告", () => {
+    const themeId = store.createTheme("通勤穿搭", CREATED_AT);
+    store.saveReport(
+      themeId,
+      { clusterSummary: [], highValueNotes: [], conclusion: "旧" },
+      CREATED_AT,
+    );
+    store.saveReport(
+      themeId,
+      { clusterSummary: [], highValueNotes: [], conclusion: "新" },
+      CREATED_AT,
+    );
+    expect(store.getReport(themeId)?.conclusion).toBe("新");
+  });
+});
