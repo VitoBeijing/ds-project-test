@@ -1,0 +1,8 @@
+# 上游克隆目录仅作 Docker 构建上下文（安全约束 #6：不导入本仓库）
+xiaohongshu-mcp-src/
+
+# 登录态与运行数据（含 cookies.json，约束 #4：0700）
+data/
+
+# 上游发布流程用到的素材目录
+images/
