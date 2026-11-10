@@ -1,0 +1,54 @@
+server/src/index.ts
+  s_5de0262d5df92e::t_c25af0a2021951 35,38-52
+  s_5de0262d5df92e::t_d6fca606b227b7 11-14
+server/src/theme-store.ts
+  s_5de0262d5df92e::t_e8a3e2cfdff9b4 56-91
+  s_5de0262d5df92e::t_4e858f30eab54f 109
+  s_5de0262d5df92e::t_53e32dbb773e5b 110-112
+  s_5de0262d5df92e::t_f0dc9a100cb305 337
+  s_5de0262d5df92e::t_933145ed6d761d 377-388
+  s_5de0262d5df92e::t_da0e32c29a5529 257-336
+  s_5de0262d5df92e::t_9a23645a68aebd 146-152
+  s_5de0262d5df92e::t_de4063414eae55 464-478
+  s_5de0262d5df92e::t_5938e31604bb73 184-192
+server/src/theme-api.test.ts
+  s_5de0262d5df92e::t_f32c6d304574be 1-294
+server/src/theme.test.ts
+  s_5de0262d5df92e::t_430edb831120a8 302-334
+server/src/mine.ts
+  s_5de0262d5df92e::t_32ff0d02c75ca1 1-48
+server/src/theme-store.test.ts
+  s_5de0262d5df92e::t_46a0ee175619b2 279-366
+server/src/theme.ts
+  s_5de0262d5df92e::t_01bd1a47fe1ffb 86,88-89,95,101-103,120,123,130
+  s_5de0262d5df92e::t_d98fffef6c4c37 29
+  s_5de0262d5df92e::t_29c4cacfbef589 2
+  s_5de0262d5df92e::t_9b98ddd9e8028e 38-39
+  s_5de0262d5df92e::t_dcf34110e7eeee 3-6
+server/src/report.test.ts
+  s_5de0262d5df92e::t_52dcec6da2ebc8 1-98
+server/src/theme-api.ts
+  s_5de0262d5df92e::t_aa758c1d4d9aa6 1-111
+server/src/report.ts
+  s_5de0262d5df92e::t_ed4a6b452b0f83 1-82
+server/src/mine.test.ts
+  s_5de0262d5df92e::t_54449869690ba7 1-23,30-39,43-45,47-84
+  s_5de0262d5df92e::t_b8d828b7a3b2cc 24-29
+  s_5de0262d5df92e::t_907ba342d29df1 40-42,46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "ba123e803b2ffd5c3040c8c4914224732a75710f",
+  "prompts": {},
+  "sessions": {
+    "s_5de0262d5df92e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f558eebe-caf0-43e2-bff5-d3104cd7ca6f",
+        "model": "ada-cli-golang-ctripcorp/claude-DeepSeek-V4-Pro-discount"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
