@@ -1,0 +1,33 @@
+server/src/theme-store.ts
+  s_7ffcabf9d45358::t_8fc5eec5ff299f 1-64,67-145,163-242,246-317
+  s_7ffcabf9d45358::t_f2c3e78a0fde0b 243-245
+  s_7ffcabf9d45358::t_83d9e561d4678b 146-162
+  s_7ffcabf9d45358::t_bcede70b556161 65-66
+server/src/theme.ts
+  s_7ffcabf9d45358::t_71f5b924e76973 1-135
+server/src/theme-store.test.ts
+  s_7ffcabf9d45358::t_73326c261ea8da 249-276
+  s_7ffcabf9d45358::t_a067b733cd4617 1-248,277-278
+server/src/theme.test.ts
+  s_7ffcabf9d45358::t_024fcbe594fc7a 11-16
+  s_7ffcabf9d45358::t_d562920a6646d4 1-10,17-102,104-253,260,270-274,276-284,287-292,302,305-345
+  s_7ffcabf9d45358::t_550d8409e55fd5 293-301
+  s_7ffcabf9d45358::t_c1ca056febff84 103,254-259,261-269,275,285-286
+  s_7ffcabf9d45358::t_57c6634ee603a1 303-304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "331d6b557596c777ed82a6a62601c33f8c20b7ea",
+  "prompts": {},
+  "sessions": {
+    "s_7ffcabf9d45358": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "967061ce-da8d-499a-a401-5f1ca36e3f19",
+        "model": "ada-cli-golang-ctripcorp/claude-glm-5.3"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
