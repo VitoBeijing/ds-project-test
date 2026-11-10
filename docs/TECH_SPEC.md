@@ -1,11 +1,12 @@
-# 技术方案：自媒体运营工作台（小红书 · 热点获取）
+# 技术方案：自媒体运营工作台（小红书 · 主题深挖）
 
-- 状态：已批准（第二轮「真实数据源接入」，2026-11-09）
+- 状态：已批准（第三版「主题收集 + 挖掘」，2026-11-10）
 - 作者：TechLead Bot
 - 变更记录：
-  - v1（已批准 2026-11-07，已交付）：热点获取模块，本地 Fixture 样例数据跑通「获取 → 存储 → 看板」
-  - v2（本版，待批准）：真实数据源接入，爬虫 / 浏览器自动化 + 用户小红书账号替换样例数据
-- 依据：docs/PRD.md（v2，2026-11-08）；DESIGN.md 留草稿，PRD 直接进技术方案
+  - v1（已批准 2026-11-07，已作废）：热点获取——热搜榜方向
+  - v2（已批准 2026-11-09，已作废）：真实数据源接入——仍基于热搜榜
+  - v3（本版，待批准）：主题深挖——主题关键词检索 → 内容簇 → 高价值挖掘 → 深度报告
+- 依据：docs/PRD.md（v3，2026-11-10）；DESIGN.md 留草稿，PRD 直接进技术方案
 
 ## 概述
 
@@ -242,3 +243,148 @@ server/ Express API（热点获取 + 真实热点源）
 - 登录方式：手动登录 + 复用浏览器会话（推荐，不接触账密明文）。
 - 抓取目标页与选择器：实现时按当前小红书页面结构确定，需真机调试。
 - 抓取频率：沿用默认每 1 小时。
+
+---
+
+# 第三版：主题深挖（v3）
+
+- 状态：已批准（2026-11-10）
+- 依据：docs/PRD.md v3「主题深挖」第一版（收集 + 挖掘）
+
+## 概述
+
+方向从「热搜榜」转向「主题深挖」：用户输入主题关键词，系统经 xiaohongshu-mcp 检索小红书相关内容、构建内容簇、挖掘高价值内容，产出主题深度报告。第一版只做「收集 + 挖掘」；图文生成、发布放第二版。热搜榜方向作废。
+
+## 技术选型
+
+| 层 | 选型 |
+| --- | --- |
+| 数据源 | 开源 xiaohongshu-mcp（Go 二进制/MCP 服务），`search_feeds` 关键词检索 + `get_feed_detail` 详情 + QR 登录 cookie 持久化 |
+| 后端 | 复用现有 Node 20 + TS + Express；新增 MCP 客户端封装调用 xiaohongshu-mcp |
+| 前端 | 复用 React 18 + Vite；新增「主题工作台」页面 |
+| 存储 | better-sqlite3，新增 themes/notes/clusters/reports 表 |
+| 高价值挖掘 | 互动数据加权（点赞×1 + 收藏×2 + 评论×3）排序取 top N（默认 10） |
+
+## 架构
+
+```
+主题工作台（web/ React）
+   │  POST /api/themes/collect
+   │  GET  /api/themes/:id/report
+   ▼
+server/ Express API
+   │
+   ├── theme 服务（collect → 内容簇 → 高价值挖掘 → 报告）
+   │
+   └── 数据源适配层 XhsMcpClient（MCP 客户端）
+         └──► xiaohongshu-mcp（独立进程，HTTP MCP :18060）
+                ├── search_feeds（关键词检索）
+                ├── get_feed_detail（详情/互动数据）
+                └── check_login_status / QR 登录（登录态由它管理）
+```
+
+## 数据结构（SQLite）
+
+```sql
+CREATE TABLE themes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  keyword    TEXT NOT NULL,
+  status     TEXT NOT NULL,   -- collecting / done / failed
+  created_at TEXT NOT NULL
+);
+CREATE TABLE notes (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  theme_id      INTEGER NOT NULL REFERENCES themes(id),
+  feed_id       TEXT NOT NULL,
+  title         TEXT NOT NULL,
+  author        TEXT,
+  like_count    INTEGER DEFAULT 0,
+  collect_count INTEGER DEFAULT 0,
+  comment_count INTEGER DEFAULT 0,
+  tags          TEXT,         -- JSON 数组
+  published_at  TEXT,
+  url           TEXT,
+  UNIQUE (theme_id, feed_id)
+);
+CREATE TABLE clusters (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  theme_id INTEGER NOT NULL REFERENCES themes(id),
+  label    TEXT NOT NULL      -- 簇名（话题标签/关键词）
+);
+CREATE TABLE cluster_notes (
+  cluster_id INTEGER NOT NULL REFERENCES clusters(id),
+  note_id    INTEGER NOT NULL REFERENCES notes(id)
+);
+CREATE TABLE reports (
+  theme_id         INTEGER PRIMARY KEY REFERENCES themes(id),
+  cluster_summary  TEXT,      -- JSON
+  high_value_notes TEXT,      -- JSON（top N）
+  conclusion       TEXT,
+  generated_at     TEXT
+);
+```
+
+## HTTP 接口
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/api/themes/collect` | body `{ keyword }`；触发检索→详情→落库→簇→挖掘→报告，返回 `themeId` |
+| GET | `/api/themes/:id/report` | 返回深度报告（内容簇概览 + 高价值内容清单 + 挖掘结论）|
+| GET | `/api/themes/:id/notes` | 返回该主题内容条目列表（供内容簇展示）|
+| GET | `/api/mcp/status` | 返回数据源/登录状态（透传 xiaohongshu-mcp `check_login_status`）|
+
+## 内容簇构建
+
+- 以 `search_feeds` 结果为基础，按笔记的话题标签（tags）粗分组；无标签的归入「其他」簇。
+- 内容簇概览：每个簇的名称、条目数、代表关键词。
+
+## 高价值内容挖掘
+
+- 判定标准：互动数据加权 `score = like_count*1 + collect_count*2 + comment_count*3`，降序取 top N（默认 10）。
+- 挖掘结论：规则生成摘要（最高互动簇、top 内容的共同标签、平均互动量）。
+
+## 数据源集成（xiaohongshu-mcp）
+
+- xiaohongshu-mcp 作为独立进程运行（Go 二进制，HTTP MCP `http://127.0.0.1:18060/mcp`）。
+- 服务端新增 `XhsMcpClient`（Node MCP 客户端或 HTTP 直调），封装 `search_feeds`、`get_feed_detail`、`check_login_status`。
+- 登录：复用 xiaohongshu-mcp 的 QR 登录 + cookie 持久化（`cookies/` 目录），不存账密；未登录时 `/api/mcp/status` 返回需要登录，前端提示。
+- 规模上限：每个主题默认检索 top 30 条（PRD 未决问题#4 默认值）。
+
+## 风险与取舍
+
+| 风险 | 应对 |
+| --- | --- |
+| xiaohongshu-mcp 为外部开源，可能有隐藏指令/外部调用/密钥 | 导入前先审查（PRD 未决问题#7）；审查后由用户批准导入 |
+| xiaohongshu-mcp 需独立部署（Go 二进制，首次下载无头浏览器 ~150MB）| 作为前置依赖文档化；`/api/mcp/status` 暴露健康状态 |
+| 内容簇聚类粗糙（仅按标签分组）| v1 先按标签粗分；后续可换语义聚类 |
+| 挖掘结论规则生成较浅 | v1 规则版；后续可接 LLM 做语义摘要 |
+| 热搜榜方向作废，旧 topics/hot-topics 代码 | 保留不删（避免破坏），新模块独立；后续清理 |
+
+## 测试策略
+
+- `XhsMcpClient`：mock MCP 响应单测 search/detail/status，不依赖真实网络。
+- theme 服务：用离线 fixture 笔记数据测「检索→落库→簇→挖掘→报告」全链路；加权评分、top N、空态、失败分支。
+- 组件测试：主题工作台渲染、主题输入框、开始收集按钮、内容簇/条目展示、高价值列表、深度报告、空/错误态。
+- 手工验收：QR 登录 → 输入主题 → 看报告；检索不到时看空态。
+
+## 工作单元拆分（线性依赖）
+
+| 编号 | 工作单元 | 依赖 | Issue |
+| --- | --- | --- | --- |
+| WU-1 | xiaohongshu-mcp 数据源适配层（`XhsMcpClient` 封装 search_feeds/get_feed_detail/check_login_status + 登录状态透传） | — | #18 |
+| WU-2 | 主题收集 + 存储 + 内容簇构建（collectTheme：检索→详情→落库→簇，SQLite 表） | WU-1 | #19 |
+| WU-3 | 高价值挖掘 + 深度报告 + API（加权评分→topN→报告 + 四个端点） | WU-2 | #20 |
+| WU-4 | 主题工作台 UI（主题输入框/开始收集按钮/内容簇/内容条目/高价值内容列表/深度报告） | WU-3 | #21 |
+
+US-5（并行多主题，P1）第一版不建 Issue，待 PRD 未决问题#3 确认。
+
+## 合规声明
+
+沿用用户「暂缓合规、先跑通流程」语境；xiaohongshu-mcp 为外部开源，导入前须经审查（隐藏指令/外部调用/密钥）。对外使用或上线前须另行做合规与账号安全评估。
+
+## 未决问题（沿用 PRD 未决问题，不阻塞）
+
+- 高价值判定标准：互动加权（点赞×1 + 收藏×2 + 评论×3）取 top 10，默认值，后续可调。
+- 内容规模上限：每主题默认 30 条。
+- 并行多主题（US-5）：第一版先单主题，多主题放后续。
+- xiaohongshu-mcp 导入前须经代码审查，审查后用户批准导入。
