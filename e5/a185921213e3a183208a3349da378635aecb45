@@ -1,0 +1,23 @@
+server/src/xhs-mcp.test.ts
+  s_b68d2460e3f46b::t_b7566250ac8bad 69-80,82-86,88-110
+  s_b68d2460e3f46b::t_5bcce0b348e640 338
+  s_b68d2460e3f46b::t_8a15bae1827e7f 632-690
+server/src/xhs-mcp.ts
+  s_b68d2460e3f46b::t_26c933728b45fc 224-225,230-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "e5a185921213e3a183208a3349da378635aecb45",
+  "prompts": {},
+  "sessions": {
+    "s_b68d2460e3f46b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a0037ad3-962f-4e34-b99d-9c6df59d17a9",
+        "model": "ada-cli-golang-ctripcorp/claude-DeepSeek-V4-Pro-discount"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
