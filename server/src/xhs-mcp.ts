@@ -221,12 +221,15 @@ export function parseSearchFeeds(payload: unknown): XhsSearchFeed[] {
 }
 
 /**
- * 归一化 get_feed_detail 结果（上游 FeedDetailResponse：`{note: FeedDetail, comments}`）。
+ * 归一化 get_feed_detail 结果（上游 FeedDetailResponse：`{feed_id, data: {note, comments}}`；
+ * 无 data 包装的旧形状 `{note, comments}` 仍兼容）。
  * 互动数缺失 / 不可解析时按 0 处理（建库默认值同为 0）；话题标签从正文提取（上游详情不含标签列表）。
  */
 export function parseFeedDetail(payload: unknown, requestedFeedId: string): XhsFeedDetail {
   const root = requireObject(payload, "get_feed_detail 结果");
-  const note = requireObject(root.note, "get_feed_detail 结果的 note");
+  // 先解包 data 层：root.data 是对象就用它，否则退回 root（兼容无包装的旧形状）。
+  const body = isJsonObject(root.data) ? root.data : root;
+  const note = requireObject(body.note, "get_feed_detail 结果的 note");
   const user = isJsonObject(note.user) ? note.user : {};
   const interactInfo = isJsonObject(note.interactInfo) ? note.interactInfo : {};
   const desc = readString(note.desc);

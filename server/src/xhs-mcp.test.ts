@@ -66,45 +66,48 @@ const SEARCH_FEEDS_PAYLOAD = {
 };
 
 const FEED_DETAIL_PAYLOAD = {
-  note: {
-    noteId: "feed-a",
-    xsecToken: "token-a",
-    title: "秋冬通勤穿搭灵感",
-    desc: "分享 3 套通勤穿搭 #通勤穿搭[话题]# #秋冬穿搭[话题]# #通勤穿搭[话题]# #OOTD#",
-    type: "normal",
-    time: 1_762_000_000_000,
-    ipLocation: "上海",
-    user: { userId: "user-1", nickname: "", nickName: "穿搭笔记", avatar: "" },
-    interactInfo: {
-      liked: false,
-      likedCount: "1.2万",
-      sharedCount: "9",
-      commentCount: "345",
-      collectedCount: "678",
-      collected: false,
-    },
-    imageList: [
-      { width: 1080, height: 1440, urlDefault: "https://sns.example/a.jpg", urlPre: "", livePhoto: false },
-    ],
-  },
-  comments: {
-    list: [
-      {
-        id: "comment-1",
-        noteId: "feed-a",
-        content: "第三套太好看了",
-        likeCount: "12",
-        createTime: 1_762_001_000_000,
-        ipLocation: "北京",
+  feed_id: "feed-a",
+  data: {
+    note: {
+      noteId: "feed-a",
+      xsecToken: "token-a",
+      title: "秋冬通勤穿搭灵感",
+      desc: "分享 3 套通勤穿搭 #通勤穿搭[话题]# #秋冬穿搭[话题]# #通勤穿搭[话题]# #OOTD#",
+      type: "normal",
+      time: 1_762_000_000_000,
+      ipLocation: "上海",
+      user: { userId: "user-1", nickname: "", nickName: "穿搭笔记", avatar: "" },
+      interactInfo: {
         liked: false,
-        userInfo: { userId: "user-3", nickname: "", nickName: "路人甲", avatar: "" },
-        subCommentCount: "0",
-        subComments: null,
-        showTags: null,
+        likedCount: "1.2万",
+        sharedCount: "9",
+        commentCount: "345",
+        collectedCount: "678",
+        collected: false,
       },
-    ],
-    cursor: "",
-    hasMore: false,
+      imageList: [
+        { width: 1080, height: 1440, urlDefault: "https://sns.example/a.jpg", urlPre: "", livePhoto: false },
+      ],
+    },
+    comments: {
+      list: [
+        {
+          id: "comment-1",
+          noteId: "feed-a",
+          content: "第三套太好看了",
+          likeCount: "12",
+          createTime: 1_762_001_000_000,
+          ipLocation: "北京",
+          liked: false,
+          userInfo: { userId: "user-3", nickname: "", nickName: "路人甲", avatar: "" },
+          subCommentCount: "0",
+          subComments: null,
+          showTags: null,
+        },
+      ],
+      cursor: "",
+      hasMore: false,
+    },
   },
 };
 
@@ -332,7 +335,7 @@ describe("XhsMcpClient", () => {
     expect(detail).toEqual({
       feedId: "feed-a",
       title: "秋冬通勤穿搭灵感",
-      desc: FEED_DETAIL_PAYLOAD.note.desc,
+      desc: FEED_DETAIL_PAYLOAD.data.note.desc,
       type: "normal",
       author: "穿搭笔记",
       likedCount: 12000,
@@ -623,6 +626,65 @@ describe("parseSearchFeeds / parseFeedDetail（直接单测归一化）", () => 
       commentCount: 0,
       tags: [],
       link: "https://www.xiaohongshu.com/explore/feed-c",
+    });
+  });
+
+  it("get_feed_detail 的 data 包装层被正确解包（feedId / title / desc / tags / 互动三数）", () => {
+    const detail = parseFeedDetail(
+      {
+        feed_id: "feed-a",
+        data: {
+          note: {
+            noteId: "feed-a",
+            title: "春季穿搭",
+            desc: "#ootd日常穿搭[话题]# #男友穿搭[话题]#",
+            type: "normal",
+            time: 1_773_655_242_000,
+            user: { nickname: "宋栩笙笙Nie" },
+            interactInfo: { likedCount: "843", collectedCount: "511", commentCount: "15" },
+          },
+        },
+      },
+      "feed-a",
+    );
+
+    expect(detail).toMatchObject({
+      feedId: "feed-a",
+      title: "春季穿搭",
+      desc: "#ootd日常穿搭[话题]# #男友穿搭[话题]#",
+      type: "normal",
+      author: "宋栩笙笙Nie",
+      likedCount: 843,
+      collectedCount: 511,
+      commentCount: 15,
+      tags: ["ootd日常穿搭", "男友穿搭"],
+    });
+  });
+
+  it("无 data 包装的旧形状仍可解析（兼容旧响应结构）", () => {
+    const detail = parseFeedDetail(
+      {
+        note: {
+          noteId: "feed-legacy",
+          title: "旧形状笔记",
+          desc: "#通勤穿搭[话题]#",
+          type: "normal",
+          user: { nickName: "旧作者" },
+          interactInfo: { likedCount: "10", collectedCount: "20", commentCount: "30" },
+        },
+      },
+      "feed-legacy",
+    );
+
+    expect(detail).toMatchObject({
+      feedId: "feed-legacy",
+      title: "旧形状笔记",
+      desc: "#通勤穿搭[话题]#",
+      author: "旧作者",
+      likedCount: 10,
+      collectedCount: 20,
+      commentCount: 30,
+      tags: ["通勤穿搭"],
     });
   });
 
