@@ -1,17 +1,12 @@
 import type { ProviderTopic } from "./store.js";
 
+/** 登录态错误移至 errors.ts（主题深挖等新模块共用）；此处保留导出，旧调用方 import 不变。 */
+export { LoginRequiredError } from "./errors.js";
+
 /** 热点数据源适配接口。每个来源实现自己的抓取逻辑，返回原始热点列表（不含 fetchedAt/source，由 service 统一归一）。 */
 export interface HotTopicProvider {
   readonly name: string;
   fetch(): Promise<ProviderTopic[]>;
-}
-
-/** 登录态缺失或会话失效。service 遇到此错误不降级到样例数据；API 据此返回 401，不静默。 */
-export class LoginRequiredError extends Error {
-  constructor() {
-    super("需要登录");
-    this.name = "LoginRequiredError";
-  }
 }
 
 /** 样例热点：数据形状合法、无外部依赖，用于在真实数据源接入前保证「列表非空 + 字段完整」可验收。 */

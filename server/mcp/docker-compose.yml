@@ -1,0 +1,28 @@
+# xiaohongshu-mcp 数据源（主题深挖）。
+# 六条安全约束（Issue #18，Archivist 审查结论，硬性要求）的落法见同目录 README.md：
+#  1. 锁定上游 commit 3b352aa：从该 commit 本地构建镜像，不用 :latest（上游没有任何 release tag 指向该 commit）；
+#  2. 必须开启 AUTH_TOKEN（未设置则拒绝启动），端口只映射到本机回环地址；
+#  3. 工作台只调用 search_feeds / get_feed_detail / check_login_status 三个只读工具（白名单见 server/src/xhs-mcp.ts）；
+#  4. cookies 落在 ./data，宿主机目录权限 0700；
+#  5. 端口只映射 127.0.0.1:18060:18060，不监听所有网卡；
+#  6. 上游仓库只作构建上下文（gitignore），不导入其 skills/post-to-xhs/ 与 CLAUDE.md。
+services:
+  xiaohongshu-mcp:
+    image: xiaohongshu-mcp:3b352aa
+    build:
+      context: ./xiaohongshu-mcp-src
+    container_name: xiaohongshu-mcp
+    restart: unless-stopped
+    tty: true
+    volumes:
+      # 登录态（cookies.json）与运行数据；宿主机侧保持 0700（见 README「部署」第 3 步）
+      - ./data:/app/data
+    environment:
+      - COOKIES_PATH=/app/data/cookies.json
+      - HOME=/app/data/home
+      - XDG_CONFIG_HOME=/app/data/config
+      # 安全约束 #2：必须显式提供令牌；建议 openssl rand -hex 32 生成
+      - AUTH_TOKEN=${AUTH_TOKEN:?未设置 AUTH_TOKEN。请先生成令牌：openssl rand -hex 32}
+    ports:
+      # 安全约束 #5：只映射到本机回环地址，不暴露给局域网
+      - "127.0.0.1:18060:18060"
