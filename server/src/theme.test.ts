@@ -280,15 +280,78 @@ describe("collectTheme", () => {
     expect(store.listNotes(1)[0]?.title).toBe("秋冬通勤穿搭灵感");
   });
 
-  it("详情与检索摘要都没有标题时按必填校验失败，主题标记 failed", async () => {
+  it("详情与检索摘要都没有标题时从正文 desc 派生标题", async () => {
     const { service, store } = createFixture({
       feeds: [{ ...FIXTURE_FEEDS[0], title: "" }],
-      details: { "feed-a": { ...FIXTURE_DETAILS["feed-a"], title: " " } },
+      details: {
+        "feed-a": {
+          ...FIXTURE_DETAILS["feed-a"],
+          title: " ",
+          desc: "建议收藏！26年国内VS国外热门AI工具 #话题#",
+        },
+      },
     });
 
-    await expect(service.collectTheme("通勤穿搭")).rejects.toThrow(/标题/);
-    expect(store.getTheme(1)).toMatchObject({ status: "failed" });
-    expect(store.listNotes(1)).toEqual([]);
+    await service.collectTheme("通勤穿搭");
+
+    expect(store.listNotes(1)[0]?.title).toBe("建议收藏！26年国内VS国外热门AI工具");
+  });
+
+  it("正常标题不受回退链影响", async () => {
+    const { service, store } = createFixture();
+
+    await service.collectTheme("通勤穿搭");
+
+    expect(store.listNotes(1).map((note) => note.title)).toEqual([
+      "秋冬通勤穿搭灵感",
+      "3 套秋冬通勤穿搭（视频版）",
+      "无标签随手记",
+    ]);
+  });
+
+  it("标题与正文 desc 都为空时跳过该笔记，其余笔记正常落库且 collect 不失败", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { service, store, getFeedDetail } = createFixture({
+        feeds: [
+          { ...FIXTURE_FEEDS[0], feedId: "feed-ok", xsecToken: "token-ok" },
+          {
+            feedId: "feed-empty",
+            xsecToken: "token-empty",
+            title: "",
+            type: "normal",
+            author: "空标题",
+            likedCount: 1,
+            link: "https://www.xiaohongshu.com/explore/feed-empty",
+          },
+        ],
+        details: {
+          "feed-ok": { ...FIXTURE_DETAILS["feed-a"], feedId: "feed-ok", title: "正常标题" },
+          "feed-empty": {
+            feedId: "feed-empty",
+            title: " ",
+            desc: "",
+            type: "normal",
+            author: "空标题",
+            likedCount: 1,
+            collectedCount: 1,
+            commentCount: 1,
+            tags: [],
+            link: "https://www.xiaohongshu.com/explore/feed-empty",
+          },
+        },
+      });
+
+      const result = await service.collectTheme("通勤穿搭");
+
+      expect(getFeedDetail).toHaveBeenCalledTimes(2);
+      expect(result.noteCount).toBe(1);
+      expect(store.getTheme(result.themeId)).toMatchObject({ status: "done" });
+      expect(store.listNotes(result.themeId).map((note) => note.feedId)).toEqual(["feed-ok"]);
+      expect(warnSpy).toHaveBeenCalledWith("跳过无标题笔记，feedId=feed-empty");
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
   it("searchLimit 非正整数时构造服务直接抛错", () => {
     const source: XhsDataSource = { searchFeeds: vi.fn(), getFeedDetail: vi.fn() };
