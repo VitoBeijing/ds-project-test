@@ -2,17 +2,22 @@ import express, { type Express } from "express";
 import { LoginRequiredError } from "./errors.js";
 import type { ThemeService } from "./theme.js";
 import type { ThemeStore } from "./theme-store.js";
-import type { XhsLoginStatus } from "./xhs-mcp.js";
+import type { XhsLoginQrcode, XhsLoginStatus } from "./xhs-mcp.js";
 
 export interface McpStatusOptions {
   source: string;
   checkLoginStatus: () => Promise<XhsLoginStatus>;
 }
 
+export interface McpLoginOptions {
+  getLoginQrcode: () => Promise<XhsLoginQrcode>;
+}
+
 export interface ThemeApiOptions {
   themeService: ThemeService;
   themeStore: ThemeStore;
   mcpStatus: McpStatusOptions;
+  mcpLogin: McpLoginOptions;
 }
 
 /** 请求体 { keyword } 的 keyword 字段：非空字符串，否则返回 undefined。 */
@@ -29,8 +34,8 @@ function parseThemeId(raw: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-/** 创建主题深挖 REST API（TECH_SPEC v3「HTTP 接口」四个端点）。 */
-export function createThemeApi({ themeService, themeStore, mcpStatus }: ThemeApiOptions): Express {
+/** 创建主题深挖 REST API（TECH_SPEC v3「HTTP 接口」四个端点 + 登录二维码）。 */
+export function createThemeApi({ themeService, themeStore, mcpStatus, mcpLogin }: ThemeApiOptions): Express {
   const app = express();
   app.use(express.json());
 
@@ -105,6 +110,20 @@ export function createThemeApi({ themeService, themeStore, mcpStatus }: ThemeApi
       loggedIn: status.loggedIn,
       ...(status.username !== undefined && { username: status.username }),
     });
+  });
+
+  app.get("/api/mcp/login-qrcode", async (_request, response) => {
+    try {
+      const qrcode = await mcpLogin.getLoginQrcode();
+      response.json(
+        qrcode.loggedIn
+          ? { loggedIn: true }
+          : { loggedIn: false, image: qrcode.image },
+      );
+    } catch (error: unknown) {
+      console.error("获取小红书登录二维码失败", error);
+      response.status(500).json({ error: "获取登录二维码失败" });
+    }
   });
 
   return app;

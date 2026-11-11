@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { describe, expect, it, vi } from "vitest";
 import { LoginRequiredError } from "./errors.js";
-import { createThemeApi, type McpStatusOptions } from "./theme-api.js";
+import { createThemeApi, type McpLoginOptions, type McpStatusOptions } from "./theme-api.js";
 import { createThemeStore, type ThemeStore } from "./theme-store.js";
 import { createThemeService, type ThemeService, type XhsDataSource } from "./theme.js";
 import { openDb } from "./store.js";
@@ -84,6 +84,7 @@ interface FixtureOptions {
   service?: ThemeService;
   source?: XhsDataSource;
   mcpStatus?: McpStatusOptions;
+  mcpLogin?: McpLoginOptions;
 }
 
 async function withThemeApi(
@@ -106,6 +107,9 @@ async function withThemeApi(
       mcpStatus: options.mcpStatus ?? {
         source: "fixture",
         checkLoginStatus: async () => ({ loggedIn: false }),
+      },
+      mcpLogin: options.mcpLogin ?? {
+        getLoginQrcode: async () => ({ loggedIn: false, image: "data:image/png;base64,AAAA" }),
       },
     }),
   );
@@ -287,6 +291,50 @@ describe("theme deep-dive API", () => {
         source: "xiaohongshu",
         checkLoginStatus: async () => {
           throw new Error("MCP 不可用");
+        },
+      },
+    });
+  });
+
+  it("GET mcp/login-qrcode 未登录时返回二维码 data URL", async () => {
+    await withThemeApi(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/mcp/login-qrcode`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        loggedIn: false,
+        image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB",
+      });
+    }, {
+      mcpLogin: {
+        getLoginQrcode: async () => ({
+          loggedIn: false,
+          image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB",
+        }),
+      },
+    });
+  });
+
+  it("GET mcp/login-qrcode 已登录时只返回登录态", async () => {
+    await withThemeApi(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/mcp/login-qrcode`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ loggedIn: true });
+    }, {
+      mcpLogin: {
+        getLoginQrcode: async () => ({ loggedIn: true }),
+      },
+    });
+  });
+
+  it("GET mcp/login-qrcode 获取二维码失败时返回 500，不静默", async () => {
+    await withThemeApi(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/mcp/login-qrcode`);
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: "获取登录二维码失败" });
+    }, {
+      mcpLogin: {
+        getLoginQrcode: async () => {
+          throw new Error("MCP 挂了");
         },
       },
     });

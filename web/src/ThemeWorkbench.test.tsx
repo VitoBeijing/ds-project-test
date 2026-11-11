@@ -118,7 +118,7 @@ describe("主题工作台", () => {
     expect(await screen.findByText(/LIVE \/ 小红书 · 穿搭薯/)).toBeInTheDocument();
   });
 
-  it("未登录时显示登录提示并禁用开始收集按钮", async () => {
+  it("未登录时显示登录提示与登录入口，并禁用开始收集按钮", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json({ source: "xiaohongshu", loggedIn: false })),
@@ -127,6 +127,8 @@ describe("主题工作台", () => {
     render(<ThemeWorkbench />);
 
     expect(await screen.findByText("未登录小红书")).toBeInTheDocument();
+    expect(screen.getByText(/登录后才能收集内容/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "登录小红书" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "开始收集" })).toBeDisabled();
   });
 
@@ -223,6 +225,45 @@ describe("主题工作台", () => {
     await user.click(screen.getByRole("button", { name: "开始收集" }));
 
     expect(await screen.findByText("未登录小红书")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "登录小红书" })).toBeInTheDocument();
+  });
+
+  it("点击登录按钮展示二维码，扫码成功后自动切换为已登录", async () => {
+    const user = userEvent.setup();
+    let loggedIn = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === "/api/mcp/status") {
+          return Response.json({
+            source: "xiaohongshu",
+            loggedIn,
+            ...(loggedIn ? { username: "穿搭薯" } : {}),
+          });
+        }
+        if (url === "/api/mcp/login-qrcode") {
+          return Response.json({ loggedIn: false, image: "data:image/png;base64,AAAA" });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    render(<ThemeWorkbench />);
+
+    const loginButton = await screen.findByRole("button", { name: "登录小红书" });
+    await user.click(loginButton);
+
+    expect(await screen.findByRole("img", { name: "小红书登录二维码" })).toHaveAttribute(
+      "src",
+      "data:image/png;base64,AAAA",
+    );
+
+    loggedIn = true;
+    expect(
+      await screen.findByText(/LIVE \/ 小红书 · 穿搭薯/, undefined, { timeout: 3_000, interval: 200 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "小红书登录二维码" })).not.toBeInTheDocument();
   });
 
   it("收集失败时显示错误提示", async () => {

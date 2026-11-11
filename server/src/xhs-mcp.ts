@@ -8,6 +8,7 @@ export const READ_ONLY_TOOLS = [
   "search_feeds",
   "get_feed_detail",
   "check_login_status",
+  "get_login_qrcode",
 ] as const;
 
 export type ReadOnlyToolName = (typeof READ_ONLY_TOOLS)[number];
@@ -68,6 +69,12 @@ export interface XhsFeedDetail {
 export interface XhsLoginStatus {
   readonly loggedIn: boolean;
   readonly username?: string;
+}
+
+/** 登录二维码：未登录时返回可展示的 data URL 图片；已登录时只返回登录态。 */
+export interface XhsLoginQrcode {
+  readonly loggedIn: boolean;
+  readonly image?: string;
 }
 
 /** MCP HTTP 响应。transport 抽象出来供单测离线注入 mock，不依赖真实网络。 */
@@ -159,6 +166,18 @@ export function parseLoginStatus(text: string): XhsLoginStatus {
     return username === undefined || username === "" ? { loggedIn: true } : { loggedIn: true, username };
   }
   throw new Error(`无法识别 check_login_status 返回的登录状态：${excerpt(text)}`);
+}
+
+/** 解析 get_login_qrcode 的原始 MCP 结果：已登录只返回登录态；未登录返回二维码 data URL。 */
+export function parseLoginQrcode(result: Record<string, unknown>): XhsLoginQrcode {
+  const text = extractTextContent(result);
+  if (text.includes("已处于登录状态")) return { loggedIn: true };
+
+  const image = extractImageContent(result);
+  if (image === undefined) {
+    throw new Error(`无法识别 get_login_qrcode 返回的内容：${excerpt(text)}`);
+  }
+  return { loggedIn: false, image };
 }
 
 function noteUrl(feedId: string): string {
@@ -269,6 +288,21 @@ function extractTextContent(result: Record<string, unknown>): string {
     .join("\n");
 }
 
+/** 从 MCP 工具结果里取第一张 image 内容，拼成 data URL（get_login_qrcode 用）。 */
+function extractImageContent(result: Record<string, unknown>): string | undefined {
+  const content = result.content;
+  if (!Array.isArray(content)) return undefined;
+  for (const item of content) {
+    if (!isJsonObject(item)) continue;
+    if (item.type !== "image") continue;
+    const data = readString(item.data);
+    if (data === undefined) continue;
+    const mimeType = readString(item.mimeType) ?? "image/png";
+    return `data:${mimeType};base64,${data}`;
+  }
+  return undefined;
+}
+
 /** 校验 MCP 地址格式，尽早暴露配置错误。 */
 function validateMcpUrl(url: string): string {
   let parsed: URL;
@@ -287,7 +321,7 @@ function validateMcpUrl(url: string): string {
 export function assertReadOnlyTool(name: string): void {
   if (!READ_ONLY_TOOL_NAMES.has(name)) {
     throw new Error(
-      `工具 ${name} 不在只读白名单内：本工作台只接入 search_feeds / get_feed_detail / check_login_status`,
+      `工具 ${name} 不在只读白名单内：本工作台只接入 search_feeds / get_feed_detail / check_login_status / get_login_qrcode`,
     );
   }
 }
@@ -386,7 +420,16 @@ export class XhsMcpClient {
     return parseLoginStatus(payload);
   }
 
-  private async callTool(tool: ReadOnlyToolName, args: Record<string, unknown>): Promise<string> {
+  /** 获取登录二维码：已登录返回登录态，未登录返回可展示的 data URL；失败抛明确错误。 */
+  async getLoginQrcode(): Promise<XhsLoginQrcode> {
+    const result = await this.callToolRaw("get_login_qrcode", {});
+    return parseLoginQrcode(result);
+  }
+
+  private async callToolRaw(
+    tool: ReadOnlyToolName,
+    args: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     assertReadOnlyTool(tool);
 
     const requestId = this.nextRequestId++;
@@ -442,6 +485,12 @@ export class XhsMcpClient {
     if (message.result.isError === true) {
       throw toolError(text === "" ? `工具 ${tool} 执行失败（服务端未返回详细信息）` : text);
     }
+    return message.result;
+  }
+
+  private async callTool(tool: ReadOnlyToolName, args: Record<string, unknown>): Promise<string> {
+    const result = await this.callToolRaw(tool, args);
+    const text = extractTextContent(result);
     if (text === "") {
       throw new Error(`工具 ${tool} 返回了空内容`);
     }

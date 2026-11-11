@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ContentCluster } from "./ContentCluster";
 import { DeepReport } from "./DeepReport";
 import { HighValueList } from "./HighValueList";
+import { LoginButton } from "./LoginButton";
+import { LoginQrcode } from "./LoginQrcode";
 import { StartCollectButton } from "./StartCollectButton";
 import { ThemeInput } from "./ThemeInput";
 import {
@@ -10,6 +12,7 @@ import {
   requestJson,
   type CollectResponse,
   type ContentClusterModel,
+  type LoginQrcodeResponse,
   type McpStatus,
   type ThemeNote,
   type ThemeNotesResponse,
@@ -17,6 +20,9 @@ import {
 } from "./theme";
 
 type LoginState = "checking" | "loggedIn" | "loggedOut" | "error";
+
+/** 展示二维码期间轮询登录态的间隔（约 2 秒）。 */
+const LOGIN_POLL_INTERVAL_MS = 2_000;
 
 interface CollectResult {
   keyword: string;
@@ -43,6 +49,8 @@ export function ThemeWorkbench() {
   const [keyword, setKeyword] = useState("");
   const [loginState, setLoginState] = useState<LoginState>("checking");
   const [username, setUsername] = useState<string | undefined>();
+  const [loginQr, setLoginQr] = useState<string | null>(null);
+  const [isLoginQrLoading, setIsLoginQrLoading] = useState(false);
   const [isCollecting, setIsCollecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<CollectResult | null>(null);
@@ -67,6 +75,55 @@ export function ThemeWorkbench() {
   useEffect(() => {
     void checkLogin();
   }, [checkLogin]);
+
+  const openLoginQr = useCallback(async () => {
+    const requestId = ++latestRequest.current;
+    setIsLoginQrLoading(true);
+    setErrorMessage(null);
+    try {
+      const qrcode = await requestJson<LoginQrcodeResponse>("/api/mcp/login-qrcode");
+      if (requestId !== latestRequest.current) return;
+      if (qrcode.loggedIn) {
+        setLoginQr(null);
+        setUsername(undefined);
+        setLoginState("loggedIn");
+      } else {
+        setLoginQr(qrcode.image ?? null);
+      }
+    } catch (error: unknown) {
+      if (requestId !== latestRequest.current) return;
+      setErrorMessage(error instanceof Error ? error.message : "获取登录二维码失败，请稍后重试。");
+    } finally {
+      if (requestId === latestRequest.current) setIsLoginQrLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (loginQr === null) return;
+
+    let cancelled = false;
+    const pollLogin = async () => {
+      try {
+        const status = await requestJson<McpStatus>("/api/mcp/status");
+        if (cancelled) return;
+        setUsername(status.username);
+        if (status.loggedIn) {
+          setLoginState("loggedIn");
+          setLoginQr(null);
+        } else {
+          setLoginState("loggedOut");
+        }
+      } catch {
+        // 轮询偶发失败不打断扫码流程；二维码仍在展示，下一轮继续探测。
+      }
+    };
+
+    const timer = setInterval(() => void pollLogin(), LOGIN_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [loginQr]);
 
   const startCollect = async () => {
     const trimmed = keyword.trim();
@@ -160,11 +217,20 @@ export function ThemeWorkbench() {
         {loginState === "loggedOut" && (
           <div className="login-banner" role="status">
             <span className="login-symbol" aria-hidden="true">!</span>
-            <div>
+            <div className="login-banner-copy">
               <h3>未登录小红书</h3>
-              <p>请先完成小红书登录，再回来开始收集。</p>
+              <p>登录后才能收集内容。扫码登录成功后会自动恢复。</p>
             </div>
+            <LoginButton onClick={() => void openLoginQr()} isLoading={isLoginQrLoading} />
           </div>
+        )}
+
+        {loginQr !== null && (
+          <LoginQrcode
+            image={loginQr}
+            onRetry={() => void openLoginQr()}
+            onClose={() => setLoginQr(null)}
+          />
         )}
 
         {errorMessage && (

@@ -4,6 +4,7 @@ import {
   assertReadOnlyTool,
   DEFAULT_XHS_MCP_URL,
   parseCountText,
+  parseLoginQrcode,
   parseLoginStatus,
   parseNoteTags,
   parseSearchFeeds,
@@ -123,6 +124,18 @@ function toolResultBody(text: string, isError = false): string {
     id: 1,
     result: {
       content: [{ type: "text", text }],
+      ...(isError ? { isError: true } : {}),
+    },
+  });
+}
+
+/** JSON-RPC tools/call 成功回文：直接给定任意 content（get_login_qrcode 含 image 内容用）。 */
+function toolResultContentBody(content: unknown[], isError = false): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    result: {
+      content,
       ...(isError ? { isError: true } : {}),
     },
   });
@@ -443,6 +456,59 @@ describe("XhsMcpClient", () => {
     await expect(createClient(transport).checkLoginStatus()).rejects.toThrow(/无法识别.*登录状态/);
   });
 
+  it("get_login_qrcode 未登录时返回二维码 data URL", async () => {
+    const transport = createTransport({
+      response: createResponse({
+        body: toolResultContentBody([
+          { type: "text", text: "请用小红书 App 在 2026-11-11 15:00:00 前扫码登录 👇" },
+          { type: "image", mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB" },
+        ]),
+      }),
+    });
+
+    await expect(createClient(transport).getLoginQrcode()).resolves.toEqual({
+      loggedIn: false,
+      image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB",
+    });
+    expect(postedRequest(transport).params).toEqual({
+      name: "get_login_qrcode",
+      arguments: {},
+    });
+  });
+
+  it("get_login_qrcode 已登录时只返回登录态", async () => {
+    const transport = createTransport({
+      response: createResponse({
+        body: toolResultContentBody([{ type: "text", text: "你当前已处于登录状态" }]),
+      }),
+    });
+
+    await expect(createClient(transport).getLoginQrcode()).resolves.toEqual({ loggedIn: true });
+  });
+
+  it("get_login_qrcode 工具报错时抛出带服务端信息的明确错误", async () => {
+    const transport = createTransport({
+      response: createResponse({
+        body: toolResultContentBody(
+          [{ type: "text", text: "获取登录扫码图片失败: 打开浏览器超时" }],
+          true,
+        ),
+      }),
+    });
+
+    await expect(createClient(transport).getLoginQrcode()).rejects.toThrow(/打开浏览器超时/);
+  });
+
+  it("get_login_qrcode 回文缺少 image 内容时不静默，抛出明确错误", async () => {
+    const transport = createTransport({
+      response: createResponse({
+        body: toolResultContentBody([{ type: "text", text: "请扫码登录" }]),
+      }),
+    });
+
+    await expect(createClient(transport).getLoginQrcode()).rejects.toThrow(/无法识别/);
+  });
+
   it("MCP 返回 JSON-RPC 错误时抛出带错误信息的明确错误", async () => {
     const transport = createTransport({
       response: createResponse({
@@ -547,8 +613,13 @@ describe("XhsMcpClient", () => {
 });
 
 describe("只读工具白名单（Issue #18 安全约束）", () => {
-  it("只接入 search_feeds / get_feed_detail / check_login_status 三个只读工具", () => {
-    expect([...READ_ONLY_TOOLS]).toEqual(["search_feeds", "get_feed_detail", "check_login_status"]);
+  it("只接入 search_feeds / get_feed_detail / check_login_status / get_login_qrcode 四个只读工具", () => {
+    expect([...READ_ONLY_TOOLS]).toEqual([
+      "search_feeds",
+      "get_feed_detail",
+      "check_login_status",
+      "get_login_qrcode",
+    ]);
   });
 
   it("白名单外的工具（发帖 / 评论 / 点赞 / 收藏等写操作）被运行时守卫拒绝", () => {
@@ -557,6 +628,38 @@ describe("只读工具白名单（Issue #18 安全约束）", () => {
     expect(() => assertReadOnlyTool("like_feed")).toThrow(/不在只读白名单/);
     expect(() => assertReadOnlyTool("favorite_feed")).toThrow(/不在只读白名单/);
     expect(() => assertReadOnlyTool("search_feeds")).not.toThrow();
+    expect(() => assertReadOnlyTool("get_login_qrcode")).not.toThrow();
+  });
+});
+
+describe("parseLoginQrcode（直接单测解析）", () => {
+  it("未登录回文返回二维码 data URL（mimeType 缺失时默认 image/png）", () => {
+    expect(
+      parseLoginQrcode({
+        content: [
+          { type: "text", text: "请扫码登录" },
+          { type: "image", mimeType: "image/png", data: "AAAA" },
+        ],
+      }),
+    ).toEqual({ loggedIn: false, image: "data:image/png;base64,AAAA" });
+
+    expect(
+      parseLoginQrcode({
+        content: [{ type: "image", data: "BBBB" }],
+      }),
+    ).toEqual({ loggedIn: false, image: "data:image/png;base64,BBBB" });
+  });
+
+  it("已登录回文只返回登录态", () => {
+    expect(
+      parseLoginQrcode({
+        content: [{ type: "text", text: "你当前已处于登录状态" }],
+      }),
+    ).toEqual({ loggedIn: true });
+  });
+
+  it("无法识别的回文抛出明确错误，不猜测", () => {
+    expect(() => parseLoginQrcode({ content: [] })).toThrow(/无法识别/);
   });
 });
 
