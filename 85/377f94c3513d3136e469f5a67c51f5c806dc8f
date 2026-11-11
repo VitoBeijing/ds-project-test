@@ -1,0 +1,22 @@
+server/src/theme.ts
+  s_b42c446d82e535::t_5b0e62a69b35fe 70-82,85,96-120
+  s_b42c446d82e535::t_bb3961c223b44f 155-160
+server/src/theme.test.ts
+  s_b42c446d82e535::t_1d107dba5348ad 283,286-292,295-354
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "85377f94c3513d3136e469f5a67c51f5c806dc8f",
+  "prompts": {},
+  "sessions": {
+    "s_b42c446d82e535": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f858db35-6664-42fb-9239-f3cc6eea0861",
+        "model": "ada-cli-golang-ctripcorp/claude-DeepSeek-V4-Pro-discount"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
