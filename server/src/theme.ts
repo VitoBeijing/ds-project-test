@@ -67,11 +67,22 @@ function dedupeByFeedId(feeds: readonly XhsSearchFeed[]): XhsSearchFeed[] {
   return unique;
 }
 
-/** 详情是权威数据；详情缺标题（视频笔记常见）时回退检索摘要的 displayTitle，作者同理。 */
-function toNote(detail: XhsFeedDetail, search: XhsSearchFeed): NewNote {
+/** 从正文派生标题时的截断长度（约 40 字）。 */
+const MAX_DERIVED_TITLE_LENGTH = 40;
+
+/** 话题标记形如 `#标签#` 或 `#标签[话题]#`，派生标题时先剥离。 */
+const TOPIC_TAG_PATTERN = /#([^#\[\]]+)(?:\[[^\]]*\])?#/g;
+
+/**
+ * 标题回退链：详情标题 → 检索摘要标题 → 从正文派生（剥离话题标记与换行后取首段并截断）。
+ * 三者皆空返回 null，由 collectTheme 跳过该笔记，避免单条坏数据让整次收集失败。
+ */
+function toNote(detail: XhsFeedDetail, search: XhsSearchFeed): NewNote | null {
+  const title = resolveTitle(detail, search);
+  if (title === "") return null;
   return {
     feedId: detail.feedId,
-    title: detail.title.trim() !== "" ? detail.title : search.title,
+    title,
     author: detail.author ?? search.author,
     likeCount: detail.likedCount,
     collectCount: detail.collectedCount,
@@ -80,6 +91,33 @@ function toNote(detail: XhsFeedDetail, search: XhsSearchFeed): NewNote {
     ...(detail.publishedAt !== undefined && { publishedAt: detail.publishedAt }),
     url: detail.link,
   };
+}
+
+/** 详情是权威数据；详情缺标题时回退检索摘要（先 trim），再回退正文派生。 */
+function resolveTitle(detail: XhsFeedDetail, search: XhsSearchFeed): string {
+  const detailTitle = detail.title.trim();
+  if (detailTitle !== "") return detailTitle;
+  const searchTitle = search.title.trim();
+  if (searchTitle !== "") return searchTitle;
+  return deriveTitleFromDesc(detail.desc);
+}
+
+/** 从正文派生标题：取首个非空段落，剥离话题标记，折叠空白后截断到约 40 字。 */
+function deriveTitleFromDesc(desc?: string): string {
+  if (desc === undefined) return "";
+  const firstParagraph = desc
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line !== "");
+  if (firstParagraph === undefined) return "";
+  const stripped = firstParagraph
+    .replace(TOPIC_TAG_PATTERN, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (stripped === "") return "";
+  return stripped.length <= MAX_DERIVED_TITLE_LENGTH
+    ? stripped
+    : stripped.slice(0, MAX_DERIVED_TITLE_LENGTH);
 }
 
 /**
@@ -114,7 +152,12 @@ export function createThemeService({
         const feeds = dedupeByFeedId(await source.searchFeeds(trimmedKeyword)).slice(0, searchLimit);
         const notes: NewNote[] = [];
         for (const feed of feeds) {
-          notes.push(toNote(await source.getFeedDetail(feed.feedId, feed.xsecToken), feed));
+          const note = toNote(await source.getFeedDetail(feed.feedId, feed.xsecToken), feed);
+          if (note === null) {
+            console.warn(`跳过无标题笔记，feedId=${feed.feedId}`);
+            continue;
+          }
+          notes.push(note);
         }
         const clusters = buildClusters(notes);
         const report = buildThemeReport(notes, clusters, topN);
