@@ -1,0 +1,55 @@
+web/src/theme.ts
+  s_1e2ca6e5ce88d6::t_17c533f7b7745f 10-15
+web/src/Login.test.tsx
+  s_1e2ca6e5ce88d6::t_e506acfc543d75 1-57
+server/src/index.ts
+  s_1e2ca6e5ce88d6::t_ea5a42c4b2d6a2 50-52
+server/src/theme-api.test.ts
+  s_1e2ca6e5ce88d6::t_40c67ef877a0cc 298-341
+  s_1e2ca6e5ce88d6::t_db094c61e80798 87
+  s_1e2ca6e5ce88d6::t_4b2ef9d628bbcc 4
+  s_1e2ca6e5ce88d6::t_185e9f2d6ef99e 111-113
+web/src/ThemeWorkbench.test.tsx
+  s_1e2ca6e5ce88d6::t_17c533f7b7745f 121,130-131,228-266
+web/src/styles.css
+  s_1e2ca6e5ce88d6::t_17c533f7b7745f 70-83
+web/src/LoginQrcode.tsx
+  s_1e2ca6e5ce88d6::t_e83d378aa33c5e 1-29
+server/src/xhs-mcp.ts
+  s_1e2ca6e5ce88d6::t_234dbc1fb31301 11
+  s_1e2ca6e5ce88d6::t_b05371ec349dad 291-305
+  s_1e2ca6e5ce88d6::t_9d14eb9c20fd2e 423-432,488-493
+  s_1e2ca6e5ce88d6::t_b89047363248c6 171-182
+  s_1e2ca6e5ce88d6::t_d82c2c5ec1bad5 324
+  s_1e2ca6e5ce88d6::t_fab1c211ec5c9d 74-79
+server/src/theme-api.ts
+  s_1e2ca6e5ce88d6::t_0ad5c4471a5bab 115-128
+  s_1e2ca6e5ce88d6::t_82a49dc6101e6d 37-38
+  s_1e2ca6e5ce88d6::t_2f470312050b7e 5,12-15,20
+web/src/ThemeWorkbench.tsx
+  s_1e2ca6e5ce88d6::t_17c533f7b7745f 5-6,15,24-26,52-53,79-126,220,222,224,228-233
+  s_1e2ca6e5ce88d6::t_376bb8538c6236 127
+server/src/xhs-mcp.test.ts
+  s_1e2ca6e5ce88d6::t_c3e2f2f7a46712 459-511
+  s_1e2ca6e5ce88d6::t_65450272146be9 7
+  s_1e2ca6e5ce88d6::t_f6d94ecea3ac0f 132-143
+  s_1e2ca6e5ce88d6::t_bdffb5bd46c774 616-622,631-662
+web/src/LoginButton.tsx
+  s_1e2ca6e5ce88d6::t_fe23d0134b9431 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "922a507adb434569d4a35a44e342cf472696387a",
+  "prompts": {},
+  "sessions": {
+    "s_1e2ca6e5ce88d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2bfa90d9-8425-4def-b83a-ab5e97242097",
+        "model": "ada-cli-golang-ctripcorp/claude-DeepSeek-V4-Pro-discount"
+      },
+      "human_author": "hanxiao <hanx25@trip.com>"
+    }
+  }
+}
