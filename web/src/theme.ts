@@ -7,6 +7,12 @@ export interface McpStatus {
   username?: string;
 }
 
+/** GET /api/mcp/login-qrcode 响应：未登录带图片 data URL，已登录只有登录态。 */
+export interface LoginQrcodeResponse {
+  loggedIn: boolean;
+  image?: string;
+}
+
 /** POST /api/themes/collect 成功响应。 */
 export interface CollectResponse {
   themeId: number;

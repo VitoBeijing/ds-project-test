@@ -47,6 +47,9 @@ app.use(
       source: "xiaohongshu",
       checkLoginStatus: xhsMcpClient.checkLoginStatus.bind(xhsMcpClient),
     },
+    mcpLogin: {
+      getLoginQrcode: xhsMcpClient.getLoginQrcode.bind(xhsMcpClient),
+    },
   }),
 );
 const server = app.listen(port, "127.0.0.1", () => {
